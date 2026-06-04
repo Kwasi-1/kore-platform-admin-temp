@@ -93,3 +93,52 @@ export const createTenant = async (payload: CreateTenantPayload) => {
   const { data } = await apiClient.post<CreateTenantResponse>('/api/v1/platform/tenants', payload);
   return data;
 };
+
+export interface TenantDetailResponse {
+  tenant: Tenant & {
+    api_key_prefix: string;
+    paystack_subaccount_code?: string;
+  };
+  metrics: {
+    total_revenue: number;
+    total_transactions: number;
+    staff_count: number;
+    monthly_revenue: number;
+  };
+  owner: {
+    name: string;
+    email: string;
+    phone?: string;
+  };
+  recent_transactions: {
+    id: string;
+    date: string;
+    amount: number;
+    channel: 'online' | 'pos';
+    payment_method: 'cash' | 'card' | 'mobile_money';
+    status: 'success' | 'failed' | 'pending';
+  }[];
+  storefront_deployment?: {
+    vercel_url: string;
+    template_name: string;
+    deployed_at: string;
+  };
+  staff: {
+    id: string;
+    name: string;
+    email: string;
+    role: 'owner' | 'manager' | 'cashier';
+    is_active: boolean;
+    last_login?: string;
+  }[];
+}
+
+export const getPlatformTenantDetail = async (id: string) => {
+  const { data } = await apiClient.get<TenantDetailResponse>(`/api/v1/platform/tenants/${id}`);
+  return data;
+};
+
+export const rotateTenantApiKey = async (id: string) => {
+  const { data } = await apiClient.post<{ api_key: string }>(`/api/v1/platform/tenants/${id}/rotate-key`);
+  return data;
+};
