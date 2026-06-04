@@ -75,3 +75,21 @@ export const updateTenant = async (id: string, updates: Partial<Tenant>) => {
   const { data } = await apiClient.put<Tenant>(`/api/v1/platform/tenants/${id}`, updates);
   return data;
 };
+
+export interface CreateTenantPayload {
+  business_name: string;
+  plan: 'pos_only' | 'ecommerce_only' | 'full_suite';
+  owner_name: string;
+  owner_email: string;
+  owner_phone?: string;
+}
+
+export interface CreateTenantResponse {
+  tenant: Tenant;
+  api_key: string;
+}
+
+export const createTenant = async (payload: CreateTenantPayload) => {
+  const { data } = await apiClient.post<CreateTenantResponse>('/api/v1/platform/tenants', payload);
+  return data;
+};
