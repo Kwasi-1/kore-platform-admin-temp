@@ -26,6 +26,9 @@ export interface Tenant {
   is_active: boolean;
   date_created: string;
   slug?: string;
+  api_key_prefix?: string;
+  monthly_revenue?: number;
+  transaction_count?: number;
 }
 
 export const getPlatformSummary = async (startDate: string, endDate: string) => {
@@ -46,5 +49,29 @@ export const getPlatformTenants = async (params?: { limit?: number; sort?: strin
   const { data } = await apiClient.get<Tenant[]>('/api/v1/platform/tenants', {
     params,
   });
+  return data;
+};
+
+export interface PlatformTenantsResponse {
+  tenants: Tenant[];
+  page_count: number;
+  total_count: number;
+}
+
+export const getPlatformTenantsPaginated = async (params: {
+  page?: number;
+  limit?: number;
+  plan?: string;
+  status?: string;
+  search?: string;
+}) => {
+  const { data } = await apiClient.get<PlatformTenantsResponse>('/api/v1/platform/tenants', {
+    params,
+  });
+  return data;
+};
+
+export const updateTenant = async (id: string, updates: Partial<Tenant>) => {
+  const { data } = await apiClient.put<Tenant>(`/api/v1/platform/tenants/${id}`, updates);
   return data;
 };
