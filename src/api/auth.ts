@@ -1,17 +1,15 @@
 import apiClient from './client';
 
-export const loginWithPassword = async (email: string, password: string) => {
-  const response = await apiClient.post('/auth/staff/login', {
+export async function platformLogin(email: string, password: string) {
+  const response = await apiClient.post('/api/v1/platform/auth/login', {
     email,
     password,
   });
-  return response.data;
-};
-
-export const loginWithPin = async (email: string, pin: string) => {
-  const response = await apiClient.post('/auth/staff/pin-login', {
-    email,
-    pin,
-  });
-  return response.data;
-};
+  
+  const data = response.data?.data || response.data || {};
+  return {
+    token: data.token || data.access_token,
+    refreshToken: data.refresh_token,
+    adminUser: data.admin || data.adminUser || null,
+  };
+}

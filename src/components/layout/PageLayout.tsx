@@ -1,5 +1,5 @@
 import React from "react";
-import { useAuthStore } from '@/store/authStore';
+import { usePlatformAuthStore } from '@/store/platformAuthStore';
 import { useThemeStore } from '@/store/themeStore';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Settings, Moon, Sun, LogOut } from 'lucide-react';
@@ -13,6 +13,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from '@iconify/react';
+
 interface PageLayoutProps {
   title?: React.ReactNode;
   actions?: React.ReactNode;
@@ -26,7 +27,7 @@ export default function PageLayout({
   className = "",
   children,
 }: PageLayoutProps) {
-  const { staffUser, logout } = useAuthStore();
+  const { adminUser, logout } = usePlatformAuthStore();
   const { isDark, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
 
@@ -61,15 +62,15 @@ export default function PageLayout({
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-1 lg:pr-1 ml-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background rounded-full transition-all duration-300 hover:bg-muted/80">
                   <div className="h-10 w-10 rounded-full border-2 border-background bg-[#0D8ABC] overflow-hidden flex items-center justify-center text-white font-bold text-sm">
-                    {staffUser ? staffUser.name.substring(0, 2).toUpperCase() : 'AU'}
+                    {adminUser ? adminUser.name.substring(0, 2).toUpperCase() : 'AU'}
                   </div>
                   <Icon icon="mdi:chevron-down" className="h-5 w-5 text-muted-foreground hidden md:flex" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 rounded-[16px] shadow-md border-border/60">
                 <DropdownMenuLabel className="flex flex-col py-2 px-3">
-                  <span className="font-bold text-foreground text-[14px] leading-tight">{staffUser?.name || 'Admin User'}</span>
-                  <span className="text-[12px] text-muted-foreground font-medium capitalize">{staffUser?.role || 'admin'}</span>
+                  <span className="font-bold text-foreground text-[14px] leading-tight">{adminUser?.name || 'Admin User'}</span>
+                  <span className="text-[12px] text-muted-foreground font-medium capitalize">{adminUser?.role || 'admin'}</span>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="cursor-pointer gap-2 py-2.5 font-medium" onClick={toggleTheme}>

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useAuthStore } from '../store/authStore';
+import { usePlatformAuthStore } from '../store/platformAuthStore';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
@@ -8,10 +8,10 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor to attach token
+// Request interceptor to attach platform token
 apiClient.interceptors.request.use(
   (config) => {
-    const { token } = useAuthStore.getState();
+    const { token } = usePlatformAuthStore.getState();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -27,9 +27,8 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      const { logout } = useAuthStore.getState();
+      const { logout } = usePlatformAuthStore.getState();
       logout();
-      // Optionally, we could emit an event or redirect to login here
     }
     return Promise.reject(error);
   }
