@@ -178,3 +178,45 @@ export const getDetailedRevenueAnalytics = async (startDate: string, endDate: st
   return data;
 };
 
+export interface PlatformTransactionDetails {
+  summary: {
+    total_transactions: number;
+    total_volume: number;
+    success_rate: number;
+    failed_payments: number;
+  };
+  chart_data: {
+    date: string;
+    count: number;
+    volume: number;
+  }[];
+  payment_method_breakdown: {
+    method: 'cash' | 'mobile_money' | 'card' | 'credit';
+    count: number;
+    volume: number;
+    percentage: number;
+  }[];
+  top_tenants: {
+    tenant_id: string;
+    tenant_name: string;
+    transaction_count: number;
+    total_volume: number;
+    avg_transaction_value: number;
+  }[];
+  failed_transactions: {
+    id: string;
+    date: string;
+    tenant_name: string;
+    amount: number;
+    failure_reason: string;
+  }[];
+}
+
+export const getDetailedTransactionAnalytics = async (startDate: string, endDate: string) => {
+  const { data } = await apiClient.get<PlatformTransactionDetails>('/api/v1/platform/analytics/transactions/detailed', {
+    params: { start_date: startDate, end_date: endDate },
+  });
+  return data;
+};
+
+
