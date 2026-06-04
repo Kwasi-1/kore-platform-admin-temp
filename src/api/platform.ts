@@ -142,3 +142,39 @@ export const rotateTenantApiKey = async (id: string) => {
   const { data } = await apiClient.post<{ api_key: string }>(`/api/v1/platform/tenants/${id}/rotate-key`);
   return data;
 };
+
+export interface PlatformRevenueDetails {
+  chart_data: {
+    date: string;
+    revenue: number;
+    fees: number;
+  }[];
+  summary: {
+    total_revenue: number;
+    platform_fees: number;
+    avg_daily_revenue: number;
+    top_tenant_name: string;
+    top_tenant_revenue: number;
+  };
+  plan_breakdown: {
+    pos_only_revenue: number;
+    ecommerce_only_revenue: number;
+    full_suite_revenue: number;
+  };
+  tenant_breakdown: {
+    tenant_id: string;
+    tenant_name: string;
+    plan: 'pos_only' | 'ecommerce_only' | 'full_suite';
+    total_revenue: number;
+    transaction_count: number;
+    avg_transaction_value: number;
+  }[];
+}
+
+export const getDetailedRevenueAnalytics = async (startDate: string, endDate: string, groupBy = 'day') => {
+  const { data } = await apiClient.get<PlatformRevenueDetails>('/api/v1/platform/analytics/revenue/detailed', {
+    params: { start_date: startDate, end_date: endDate, group_by: groupBy },
+  });
+  return data;
+};
+
