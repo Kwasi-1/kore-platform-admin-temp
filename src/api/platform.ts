@@ -235,5 +235,30 @@ export const updatePlatformSettings = async (settings: PlatformSettingsData) => 
   return data;
 };
 
+export interface SystemHealthData {
+  database: {
+    status: 'connected' | 'error';
+    connection_pool_size: number;
+    max_connections: number;
+  };
+  redis: {
+    status: 'connected' | 'error';
+    memory_used_mb: number;
+  };
+  paystack_api: {
+    status: 'connected' | 'error';
+    last_successful_webhook: string;
+  };
+  api_response_time: number; // ms
+  error_rate: number; // percentage
+  webhook_delivery_rate: number; // percentage
+}
+
+export const getSystemHealth = async () => {
+  const { data } = await apiClient.get<SystemHealthData>('/api/v1/platform/health');
+  return data;
+};
+
+
 
 
