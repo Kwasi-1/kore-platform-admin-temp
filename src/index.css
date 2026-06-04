@@ -1,0 +1,253 @@
+@font-face {
+  font-family: "AtypDisplay";
+  src:
+    url("./assets/fonts/AtypDisplay-Light.woff2") format("woff2"),
+    url("./assets/fonts/AtypDisplay-Light.woff") format("woff");
+}
+@font-face {
+  font-family: "AtypDisplay";
+  src:
+    url("./assets/fonts/AtypDisplay-Regular.woff2") format("woff2"),
+    url("./assets/fonts/AtypDisplay-Regular.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "AtypDisplay";
+  src:
+    url("./assets/fonts/AtypDisplay-Regular.woff2") format("woff2"),
+    url("./assets/fonts/AtypDisplay-Regular.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "AtypDisplay";
+  src:
+    url("./assets/fonts/AtypDisplay-Regular.woff2") format("woff2"),
+    url("./assets/fonts/AtypDisplay-Regular.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "AtypDisplay";
+  src:
+    url("./assets/fonts/AtypDisplay-Regular.woff2") format("woff2"),
+    url("./assets/fonts/AtypDisplay-Regular.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "AdventPro";
+  src:
+    url("./assets/fonts/AdventPro-Regular.woff2") format("woff2"),
+    url("./assets/fonts/AdventPro-Regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Zain";
+  src:
+    url("./assets/fonts/Zain-Regular.woff2") format("woff2"),
+    url("./assets/fonts/Zain-Regular.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Zain";
+  src:
+    url("./assets/fonts/Zain-Regular.woff2") format("woff2"),
+    url("./assets/fonts/Zain-Regular.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Zain";
+  src:
+    url("./assets/fonts/Zain-Regular.woff2") format("woff2"),
+    url("./assets/fonts/Zain-Regular.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Zain";
+  src:
+    url("./assets/fonts/Zain-Regular.woff2") format("woff2"),
+    url("./assets/fonts/Zain-Regular.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "NeueHaasDisplay";
+  src:
+    url("./assets/fonts/NeueHaasDisplay-Roman.woff2") format("woff2"),
+    url("./assets/fonts/NeueHaasDisplay-Roman.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "NeueHaasDisplay";
+  src:
+    url("./assets/fonts/NeueHaasDisplay-Roman.woff2") format("woff2"),
+    url("./assets/fonts/NeueHaasDisplay-Roman.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "NeueHaasDisplay";
+  src:
+    url("./assets/fonts/NeueHaasDisplay-Roman.woff2") format("woff2"),
+    url("./assets/fonts/NeueHaasDisplay-Roman.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "NeueHaasDisplay";
+  src:
+    url("./assets/fonts/NeueHaasDisplay-Roman.woff2") format("woff2"),
+    url("./assets/fonts/NeueHaasDisplay-Roman.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 7%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 7%;
+    --primary: 84 84% 71%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 0 0% 97%;
+    --secondary-foreground: 0 0% 7%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 0% 94%;
+    --accent-foreground: 0 0% 4%;
+    --destructive: 349 100% 42%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 94%;
+    --input: 0 0% 94%;
+    --ring: 84 84% 71%;
+    --radius: 1rem;
+    --sidebar-background: 0 0% 11%;
+  }
+
+  .dark {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 84 84% 71%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 84 84% 71%;
+    --sidebar-background: 0 0% 7%;
+  }
+
+  * {
+    @apply border-border tracking-wide;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: NeueHaasDisplay, sans-serif;
+    min-height: 100vh;
+    scroll-behavior: smooth;
+    /* letter-spacing: -0.4px; */
+  }
+}
+
+/* --- Receipt Printing --- */
+@media print {
+  @page {
+    margin: 0;
+  }
+
+  /* Hide the main application root entirely */
+  #root {
+    display: none !important;
+  }
+  
+  /* Hide all NextUI generated overlays and portals except our print-portal */
+  body > div:not(#print-portal) {
+    display: none !important;
+  }
+
+  /* Force the print portal to display */
+  #print-portal {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 10px !important;
+    background: white !important;
+    color: black !important;
+    /* Reset Tailwind's hidden class */
+    visibility: visible !important; 
+  }
+
+  /* Make sure the receipt inside the portal expands fully */
+  #print-portal .flex-1.overflow-y-auto {
+    overflow: visible !important;
+    height: auto !important;
+  }
+}
+
+/* Navigation transition loading bar animation */
+@keyframes shimmer {
+  0%   { transform: scaleX(0.1); transform-origin: left; opacity: 1; }
+  50%  { transform: scaleX(0.7); transform-origin: left; opacity: 1; }
+  100% { transform: scaleX(1);   transform-origin: left; opacity: 0; }
+}
+
+/* Hide scrollbar while keeping scroll behaviour */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide number input arrows */
+.no-spin-buttons::-webkit-inner-spin-button,
+.no-spin-buttons::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spin-buttons {
+  -moz-appearance: textfield;
+}
+
+.spacing{
+  * {
+    @apply tracking-tighter
+  }
+}
+
+/* .spacing-sm{
+  * {
+    @apply tracking-[-0.0rem]
+  }
+} */
