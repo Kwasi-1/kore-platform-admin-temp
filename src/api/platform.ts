@@ -219,4 +219,21 @@ export const getDetailedTransactionAnalytics = async (startDate: string, endDate
   return data;
 };
 
+export interface PlatformSettingsData {
+  platform_fee_percentage: number;
+  default_tax_rate: number;
+  supported_payment_methods: ('cash' | 'mtn_momo' | 'vodafone_cash' | 'airteltigo_money' | 'card')[];
+}
+
+export const getPlatformSettings = async () => {
+  const { data } = await apiClient.get<PlatformSettingsData>('/api/v1/platform/settings');
+  return data;
+};
+
+export const updatePlatformSettings = async (settings: PlatformSettingsData) => {
+  const { data } = await apiClient.put<PlatformSettingsData>('/api/v1/platform/settings', settings);
+  return data;
+};
+
+
 
