@@ -219,7 +219,7 @@ export function setupMockApi() {
 
   // 6. Tenants paginated list
   mock.onGet('/api/v1/platform/tenants').reply((config) => {
-    const { plan, status, search, page = 1, limit = 10 } = config.params || {};
+    const { plan, status, search, page, limit = 10 } = config.params || {};
 
     let filtered = [...mockTenants];
     if (plan) {
@@ -233,8 +233,15 @@ export function setupMockApi() {
       filtered = filtered.filter(t => t.business_name.toLowerCase().includes(search.toLowerCase()));
     }
 
-    const startIdx = (page - 1) * limit;
-    const endIdx = page * limit;
+    if (page === undefined) {
+      // Direct array required by getPlatformTenants
+      const items = filtered.slice(0, limit);
+      return [200, items];
+    }
+
+    const currentPage = Number(page) || 1;
+    const startIdx = (currentPage - 1) * limit;
+    const endIdx = currentPage * limit;
     const items = filtered.slice(startIdx, endIdx);
     const pageCount = Math.ceil(filtered.length / limit);
 
