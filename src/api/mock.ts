@@ -138,20 +138,26 @@ export function setupMockApi() {
     const topTenant = tenantBreakdown[0] || { tenant_name: 'None', total_revenue: 0 };
 
     return [200, {
-      chart_data: chartData,
-      summary: {
-        total_revenue: totalRevenue,
-        platform_fees: platformFees,
-        avg_daily_revenue: avgDailyRevenue,
-        top_tenant_name: topTenant.tenant_name,
-        top_tenant_revenue: topTenant.total_revenue,
-      },
-      plan_breakdown: {
-        pos_only_revenue: tenantBreakdown.filter(t => t.plan === 'pos_only').reduce((a, b) => a + b.total_revenue, 0),
-        ecommerce_only_revenue: tenantBreakdown.filter(t => t.plan === 'ecommerce_only').reduce((a, b) => a + b.total_revenue, 0),
-        full_suite_revenue: tenantBreakdown.filter(t => t.plan === 'full_suite').reduce((a, b) => a + b.total_revenue, 0),
-      },
-      tenant_breakdown: tenantBreakdown,
+      success: {
+        status: 'OK',
+        code: 200,
+        data: {
+          chart_data: chartData,
+          summary: {
+            total_revenue: totalRevenue,
+            platform_fees: platformFees,
+            avg_daily_revenue: avgDailyRevenue,
+            top_tenant_name: topTenant.tenant_name,
+            top_tenant_revenue: topTenant.total_revenue,
+          },
+          plan_breakdown: {
+            pos_only_revenue: tenantBreakdown.filter(t => t.plan === 'pos_only').reduce((a, b) => a + b.total_revenue, 0),
+            ecommerce_only_revenue: tenantBreakdown.filter(t => t.plan === 'ecommerce_only').reduce((a, b) => a + b.total_revenue, 0),
+            full_suite_revenue: tenantBreakdown.filter(t => t.plan === 'full_suite').reduce((a, b) => a + b.total_revenue, 0),
+          },
+          tenant_breakdown: tenantBreakdown,
+        }
+      }
     }];
   });
 
@@ -204,16 +210,22 @@ export function setupMockApi() {
     }));
 
     return [200, {
-      summary: {
-        total_transactions: totalTransactions,
-        total_volume: totalVolume,
-        success_rate: successRate,
-        failed_payments: failedPayments,
-      },
-      chart_data: chartData,
-      payment_method_breakdown: paymentMethodBreakdown,
-      top_tenants: topTenants,
-      failed_transactions: failedTransactions,
+      success: {
+        status: 'OK',
+        code: 200,
+        data: {
+          summary: {
+            total_transactions: totalTransactions,
+            total_volume: totalVolume,
+            success_rate: successRate,
+            failed_payments: failedPayments,
+          },
+          chart_data: chartData,
+          payment_method_breakdown: paymentMethodBreakdown,
+          top_tenants: topTenants,
+          failed_transactions: failedTransactions,
+        }
+      }
     }];
   });
 
@@ -233,12 +245,6 @@ export function setupMockApi() {
       filtered = filtered.filter(t => t.business_name.toLowerCase().includes(search.toLowerCase()));
     }
 
-    if (page === undefined) {
-      // Direct array required by getPlatformTenants
-      const items = filtered.slice(0, limit);
-      return [200, items];
-    }
-
     const currentPage = Number(page) || 1;
     const startIdx = (currentPage - 1) * limit;
     const endIdx = currentPage * limit;
@@ -246,9 +252,19 @@ export function setupMockApi() {
     const pageCount = Math.ceil(filtered.length / limit);
 
     return [200, {
-      tenants: items,
-      page_count: pageCount,
-      total_count: filtered.length,
+      success: {
+        status: 'OK',
+        code: 200,
+        data: {
+          tenants: items,
+          pagination: {
+            page: currentPage,
+            per_page: limit,
+            total_items: filtered.length,
+            total_pages: pageCount,
+          }
+        }
+      }
     }];
   });
 
@@ -262,32 +278,38 @@ export function setupMockApi() {
     }
 
     return [200, {
-      tenant,
-      metrics: {
-        total_revenue: tenant.monthly_revenue * 12,
-        total_transactions: tenant.transaction_count * 12,
-        staff_count: 4,
-        monthly_revenue: tenant.monthly_revenue,
-      },
-      owner: {
-        name: 'Kofi Mensah',
-        email: `kofi@${tenant.business_name.toLowerCase().replace(/[^a-z]/g, '')}.com`,
-        phone: '+233241112222',
-      },
-      recent_transactions: [
-        { id: 'tx-01', date: '2026-06-04 12:30', amount: 150, channel: 'pos' as const, payment_method: 'cash' as const, status: 'success' as const },
-        { id: 'tx-02', date: '2026-06-04 11:15', amount: 480, channel: 'online' as const, payment_method: 'mobile_money' as const, status: 'success' as const },
-        { id: 'tx-03', date: '2026-06-03 16:00', amount: 220, channel: 'pos' as const, payment_method: 'card' as const, status: 'success' as const },
-      ],
-      storefront_deployment: tenant.plan !== 'pos_only' ? {
-        vercel_url: `https://${tenant.business_name.toLowerCase().replace(/[^a-z]/g, '')}.hpos.shop`,
-        template_name: 'Modern Minimalist Retail',
-        deployed_at: '2026-06-01 14:00',
-      } : undefined,
-      staff: [
-        { id: 'st-1', name: 'Kofi Mensah', email: `kofi@${tenant.business_name.toLowerCase().replace(/[^a-z]/g, '')}.com`, role: 'owner' as const, is_active: true, last_login: '2026-06-04 08:30' },
-        { id: 'st-2', name: 'Ama Boateng', email: `ama@${tenant.business_name.toLowerCase().replace(/[^a-z]/g, '')}.com`, role: 'manager' as const, is_active: true, last_login: '2026-06-04 07:15' },
-      ],
+      success: {
+        status: 'OK',
+        code: 200,
+        data: {
+          tenant,
+          metrics: {
+            total_revenue: (tenant.monthly_revenue || 0) * 12,
+            total_transactions: (tenant.transaction_count || 0) * 12,
+            staff_count: 4,
+            monthly_revenue: tenant.monthly_revenue || 0,
+          },
+          owner: {
+            name: 'Kofi Mensah',
+            email: `kofi@${tenant.business_name.toLowerCase().replace(/[^a-z]/g, '')}.com`,
+            phone: '+233241112222',
+          },
+          recent_transactions: [
+            { id: 'tx-01', date: '2026-06-04 12:30', amount: 150, channel: 'pos' as const, payment_method: 'cash' as const, status: 'success' as const },
+            { id: 'tx-02', date: '2026-06-04 11:15', amount: 480, channel: 'online' as const, payment_method: 'mobile_money' as const, status: 'success' as const },
+            { id: 'tx-03', date: '2026-06-03 16:00', amount: 220, channel: 'pos' as const, payment_method: 'card' as const, status: 'success' as const },
+          ],
+          storefront_deployment: tenant.plan !== 'pos_only' ? {
+            vercel_url: `https://${tenant.business_name.toLowerCase().replace(/[^a-z]/g, '')}.hpos.shop`,
+            template_name: 'Modern Minimalist Retail',
+            deployed_at: '2026-06-01 14:00',
+          } : undefined,
+          staff: [
+            { id: 'st-1', name: 'Kofi Mensah', email: `kofi@${tenant.business_name.toLowerCase().replace(/[^a-z]/g, '')}.com`, role: 'owner' as const, is_active: true, last_login: '2026-06-04 08:30' },
+            { id: 'st-2', name: 'Ama Boateng', email: `ama@${tenant.business_name.toLowerCase().replace(/[^a-z]/g, '')}.com`, role: 'manager' as const, is_active: true, last_login: '2026-06-04 07:15' },
+          ],
+        }
+      }
     }];
   });
 
@@ -303,11 +325,19 @@ export function setupMockApi() {
     const updates = JSON.parse(config.data);
     mockTenants[idx] = { ...mockTenants[idx], ...updates };
 
-    return [200, mockTenants[idx]];
+    return [200, {
+      success: {
+        status: 'OK',
+        code: 200,
+        data: {
+          tenant: mockTenants[idx]
+        }
+      }
+    }];
   });
 
   // 9. Rotate Tenant API Key
-  mock.onPost(/\/api\/v1\/platform\/tenants\/[^/]+\/rotate-key$/).reply((config) => {
+  mock.onPost(/\/api\/v1\/platform\/tenants\/[^/]+\/api-key$/).reply((config) => {
     const urlParts = config.url?.split('/') || [];
     const id = urlParts[urlParts.length - 2];
     const idx = mockTenants.findIndex(t => t.id === id);
@@ -325,7 +355,13 @@ export function setupMockApi() {
     };
 
     return [200, {
-      api_key: `hpos_live_${entropy}`
+      success: {
+        status: 'OK',
+        code: 200,
+        data: {
+          api_key: `hpos_live_${entropy}`
+        }
+      }
     }];
   });
 
@@ -336,7 +372,7 @@ export function setupMockApi() {
     
     const newTenant = {
       id: `tn-${Math.random().toString(36).substring(2, 9)}`,
-      business_name: payload.business_name,
+      business_name: payload.businessName || payload.business_name,
       plan: payload.plan,
       is_active: true,
       date_created: format(new Date(), 'yyyy-MM-dd'),
@@ -349,8 +385,14 @@ export function setupMockApi() {
     mockTenants = [newTenant, ...mockTenants];
 
     return [201, {
-      tenant: newTenant,
-      api_key: `hpos_live_${entropy}`
+      success: {
+        status: 'CREATED',
+        code: 201,
+        data: {
+          tenant: newTenant,
+          api_key: `hpos_live_${entropy}`
+        }
+      }
     }];
   });
 

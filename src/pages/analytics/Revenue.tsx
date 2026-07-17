@@ -34,99 +34,6 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 
-// Dynamic mock generator for Demo Mode
-function generateMockRevenue(startDate: Date, endDate: Date, groupBy: string): PlatformRevenueDetails {
-  const daysDiff = Math.max(1, differenceInDays(endDate, startDate) + 1);
-
-  // Generate chart data based on group_by
-  let chartData: { date: string; revenue: number; fees: number }[] = [];
-  
-  if (groupBy === 'month') {
-    const intervals = eachMonthOfInterval({ start: startDate, end: endDate });
-    chartData = intervals.map(date => {
-      const rev = Math.floor(180000 + Math.random() * 120000);
-      return {
-        date: format(date, 'MMM yyyy'),
-        revenue: rev,
-        fees: Math.round(rev * 0.015), // 1.5% fee
-      };
-    });
-  } else if (groupBy === 'week') {
-    const intervals = eachWeekOfInterval({ start: startDate, end: endDate });
-    chartData = intervals.map(date => {
-      const rev = Math.floor(45000 + Math.random() * 25000);
-      return {
-        date: `Wk of ${format(date, 'MMM dd')}`,
-        revenue: rev,
-        fees: Math.round(rev * 0.015),
-      };
-    });
-  } else {
-    // default: day
-    const intervals = eachDayOfInterval({ start: startDate, end: endDate });
-    chartData = intervals.map(date => {
-      const rev = Math.floor(4500 + Math.random() * 6500);
-      return {
-        date: format(date, 'MMM dd'),
-        revenue: rev,
-        fees: Math.round(rev * 0.015),
-      };
-    });
-  }
-
-  // Calculate stats aggregates
-  const totalRevenue = chartData.reduce((acc, curr) => acc + curr.revenue, 0);
-  const platformFees = Math.round(totalRevenue * 0.015);
-  const avgDailyRevenue = Math.round(totalRevenue / daysDiff);
-
-  // Tenant breakdown details
-  const tenantsList = [
-    { name: "Kofi's Provisions", plan: 'full_suite' as const, revenueFactor: 0.38, transFactor: 1.1 },
-    { name: "Accra Groceries", plan: 'pos_only' as const, revenueFactor: 0.22, transFactor: 0.8 },
-    { name: "Osu Fashion Hub", plan: 'ecommerce_only' as const, revenueFactor: 0.16, transFactor: 0.6 },
-    { name: "Kumasi Tech Store", plan: 'full_suite' as const, revenueFactor: 0.14, transFactor: 0.9 },
-    { name: "Tema Logistics", plan: 'full_suite' as const, revenueFactor: 0.10, transFactor: 0.7 },
-  ];
-
-  const tenantBreakdown = tenantsList.map((t, idx) => {
-    const tenantRev = Math.round(totalRevenue * t.revenueFactor);
-    const transCount = Math.max(1, Math.round(tenantRev / (65 + Math.random() * 35)));
-    const avgTrans = Math.round((tenantRev / transCount) * 100) / 100;
-    return {
-      tenant_id: `tn-mock-${idx + 1}`,
-      tenant_name: t.name,
-      plan: t.plan,
-      total_revenue: tenantRev,
-      transaction_count: transCount,
-      avg_transaction_value: avgTrans,
-    };
-  });
-
-  // Top tenant identification
-  const sortedTenants = [...tenantBreakdown].sort((a, b) => b.total_revenue - a.total_revenue);
-  const topTenant = sortedTenants[0] || { tenant_name: 'None', total_revenue: 0 };
-
-  // Plan revenue distributions
-  const planBreakdown = {
-    pos_only_revenue: tenantBreakdown.filter(t => t.plan === 'pos_only').reduce((a, b) => a + b.total_revenue, 0),
-    ecommerce_only_revenue: tenantBreakdown.filter(t => t.plan === 'ecommerce_only').reduce((a, b) => a + b.total_revenue, 0),
-    full_suite_revenue: tenantBreakdown.filter(t => t.plan === 'full_suite').reduce((a, b) => a + b.total_revenue, 0),
-  };
-
-  return {
-    chart_data: chartData,
-    summary: {
-      total_revenue: totalRevenue,
-      platform_fees: platformFees,
-      avg_daily_revenue: avgDailyRevenue,
-      top_tenant_name: topTenant.tenant_name,
-      top_tenant_revenue: topTenant.total_revenue,
-    },
-    plan_breakdown: planBreakdown,
-    tenant_breakdown: tenantBreakdown,
-  };
-}
-
 export default function Revenue() {
   const { formatGHS } = useCurrency();
 
@@ -151,15 +58,20 @@ export default function Revenue() {
     retry: false,
   });
 
-  const isDemoMode = !serverData;
+  const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true';
 
-  // Resolve active data
-  const localData = React.useMemo(() => {
-    if (serverData) return serverData;
-    return generateMockRevenue(dateRange.startDate, dateRange.endDate, groupBy);
-  }, [serverData, dateRange.startDate, dateRange.endDate, groupBy]);
+  if (isLoading || !serverData) {
+    return (
+      <div className="flex h-72 w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 rounded-full border-4 border-muted border-t-primary animate-spin" />
+          <p className="text-sm text-muted-foreground font-medium tracking-wide">Loading revenue details…</p>
+        </div>
+      </div>
+    );
+  }
 
-  const { summary, chart_data, plan_breakdown, tenant_breakdown } = localData;
+  const { summary, chart_data, plan_breakdown, tenant_breakdown } = serverData;
 
   // 3. DataTable column definitions
   const columns: ColumnDef<typeof tenant_breakdown[0]>[] = [

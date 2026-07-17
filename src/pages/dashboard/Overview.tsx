@@ -54,39 +54,16 @@ export default function Overview() {
     retry: false,
   });
 
-  // Mock / Fallback data in case the server endpoints are pending or unavailable
-  const fallbackSummary = {
-    active_tenants: 142,
-    platform_revenue_this_month: 48250,
-    transactions_today: 890,
-    new_tenants_this_month: 18,
-    plan_distribution: [
-      { plan: 'pos_only', count: 58, percentage: 41 },
-      { plan: 'ecommerce_only', count: 34, percentage: 24 },
-      { plan: 'full_suite', count: 50, percentage: 35 },
-    ],
-  };
-
-  const fallbackRevenue = Array.from({ length: 30 }, (_, i) => {
-    const dateObj = subDays(today, 29 - i);
-    return {
-      date: format(dateObj, 'MMM dd'),
-      revenue: Math.floor(1200 + Math.random() * 1500),
-    };
-  });
-
-  const fallbackTenants: Tenant[] = [
-    { id: 'tn-01', business_name: "Kofi's Provisions", plan: 'full_suite', is_active: true, date_created: format(subDays(today, 0), 'yyyy-MM-dd') },
-    { id: 'tn-02', business_name: 'Accra Groceries', plan: 'pos_only', is_active: true, date_created: format(subDays(today, 2), 'yyyy-MM-dd') },
-    { id: 'tn-03', business_name: 'Osu Fashion Hub', plan: 'ecommerce_only', is_active: true, date_created: format(subDays(today, 3), 'yyyy-MM-dd') },
-    { id: 'tn-04', business_name: 'Kumasi Tech Store', plan: 'full_suite', is_active: true, date_created: format(subDays(today, 5), 'yyyy-MM-dd') },
-    { id: 'tn-05', business_name: 'Apex Pharmacy', plan: 'pos_only', is_active: false, date_created: format(subDays(today, 7), 'yyyy-MM-dd') },
-  ];
-
   // Resolve active data
-  const summary = summaryData || fallbackSummary;
-  const rawRevenue = revenueData || fallbackRevenue;
-  const tenants = tenantsData || fallbackTenants;
+  const summary = summaryData || {
+    active_tenants: 0,
+    platform_revenue_this_month: 0,
+    transactions_today: 0,
+    new_tenants_this_month: 0,
+    plan_distribution: []
+  };
+  const rawRevenue = revenueData || [];
+  const tenants = tenantsData || [];
   
   // Format revenue data for the chart component (needs date on X-axis)
   const chartData = rawRevenue.map((d) => ({
@@ -94,7 +71,7 @@ export default function Overview() {
     revenue: d.revenue,
   }));
 
-  const isDemoMode = !summaryData || !revenueData || !tenantsData;
+  const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true';
 
   // Dynamic Event/Activity Feed derived from tenant creation and analytics
   const getActivities = () => {

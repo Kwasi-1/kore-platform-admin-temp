@@ -64,7 +64,7 @@ export default function Sidebar() {
   ];
 
   // Sidebar inversion theme classes
-  const sidebarBg = !isDark ? 'bg-sidebar text-white' : 'bg-white text-gray-800 border-r border-border';
+  const sidebarBg = !isDark ? 'bg-sidebar text-white' : 'text-white/90';
   const textMuted = !isDark ? 'text-gray-400' : 'text-gray-500';
   const hoverClass = !isDark 
     ? 'text-gray-300 hover:bg-white/10 hover:text-white' 

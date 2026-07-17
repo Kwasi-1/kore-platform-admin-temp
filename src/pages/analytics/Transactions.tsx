@@ -37,107 +37,6 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 
-// Dynamic mock generator for Demo Mode
-function generateMockTransactions(startDate: Date, endDate: Date): PlatformTransactionDetails {
-  const daysDiff = Math.max(1, differenceInDays(endDate, startDate) + 1);
-
-  // Generate chart data points
-  const intervals = eachDayOfInterval({ start: startDate, end: endDate });
-  const chartData = intervals.map(date => {
-    const count = Math.floor(120 + Math.random() * 80);
-    const volume = Math.floor(count * (35 + Math.random() * 25));
-    return {
-      date: format(date, 'MMM dd'),
-      count,
-      volume,
-    };
-  });
-
-  // Calculate summary metrics
-  const totalTransactions = chartData.reduce((acc, curr) => acc + curr.count, 0);
-  const totalVolume = chartData.reduce((acc, curr) => acc + curr.volume, 0);
-  const successRate = 97.2 + Math.random() * 1.8;
-  const failedPayments = Math.round(totalTransactions * ((100 - successRate) / 100));
-
-  // Payment method breakdowns
-  const paymentBreakdownRaw = [
-    { method: 'cash' as const, share: 0.30, label: 'Cash' },
-    { method: 'mobile_money' as const, share: 0.50, label: 'Mobile Money' },
-    { method: 'card' as const, share: 0.15, label: 'Card' },
-    { method: 'credit' as const, share: 0.05, label: 'Store Credit' },
-  ];
-
-  const paymentMethodBreakdown = paymentBreakdownRaw.map(p => {
-    const count = Math.round(totalTransactions * p.share);
-    const volume = Math.round(totalVolume * p.share);
-    return {
-      method: p.method,
-      count,
-      volume,
-      percentage: Math.round(p.share * 100),
-    };
-  });
-
-  // Top tenants
-  const tenantsList = [
-    { name: "Kofi's Provisions", share: 0.35 },
-    { name: "Accra Groceries", share: 0.20 },
-    { name: "Osu Fashion Hub", share: 0.18 },
-    { name: "Kumasi Tech Store", share: 0.15 },
-    { name: "Tema Logistics", share: 0.12 },
-  ];
-
-  const topTenants = tenantsList.map((t, idx) => {
-    const tenantVol = Math.round(totalVolume * t.share);
-    const tenantCount = Math.round(totalTransactions * t.share);
-    const avgTrans = tenantCount > 0 ? Math.round((tenantVol / tenantCount) * 100) / 100 : 0;
-    return {
-      tenant_id: `tn-mock-${idx + 1}`,
-      tenant_name: t.name,
-      transaction_count: tenantCount,
-      total_volume: tenantVol,
-      avg_transaction_value: avgTrans,
-    };
-  });
-
-  // Failed transactions reasons
-  const failureReasons = [
-    "Insufficient Funds",
-    "Card Expired",
-    "Incorrect PIN",
-    "Authentication Failed",
-    "Declined by Bank",
-    "Abandoned checkout",
-    "Network timeout",
-  ];
-
-  const failedTransactionsList = Array.from({ length: 5 }, (_, idx) => {
-    const randomDateObj = subDays(endDate, Math.floor(Math.random() * Math.min(daysDiff, 5)));
-    const reason = failureReasons[idx % failureReasons.length];
-    const tenant = tenantsList[idx % tenantsList.length];
-    return {
-      id: `fail-${idx + 1}`,
-      date: format(randomDateObj, 'yyyy-MM-dd HH:mm'),
-      tenant_name: tenant.name,
-      amount: Math.floor(60 + Math.random() * 220),
-      failure_reason: reason,
-    };
-  }).sort((a, b) => b.date.localeCompare(a.date));
-
-  return {
-    summary: {
-      total_transactions: totalTransactions,
-      total_volume: totalVolume,
-      success_rate: Math.round(successRate * 10) / 10,
-      failed_payments: failedPayments,
-    },
-    chart_data: chartData,
-    payment_method_breakdown: paymentMethodBreakdown,
-    top_tenants: topTenants,
-    failed_transactions: failedTransactionsList,
-  };
-}
-
 export default function Transactions() {
   const { formatGHS } = useCurrency();
 
@@ -163,19 +62,12 @@ export default function Transactions() {
     retry: false,
   });
 
-  const isDemoMode = !serverData;
-
-  // Resolve active data
-  const localData = React.useMemo(() => {
-    if (serverData) return serverData;
-    return generateMockTransactions(dateRange.startDate, dateRange.endDate);
-  }, [serverData, dateRange.startDate, dateRange.endDate]);
-
-  const { summary, chart_data, payment_method_breakdown, top_tenants, failed_transactions } = localData;
+  const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true';
 
   // Donut chart variables
   const donutData = React.useMemo(() => {
-    return payment_method_breakdown.map((item) => {
+    if (!serverData || !serverData.payment_method_breakdown) return [];
+    return serverData.payment_method_breakdown.map((item) => {
       let name = 'Cash';
       if (item.method === 'mobile_money') name = 'Mobile Money';
       if (item.method === 'card') name = 'Card';
@@ -188,7 +80,27 @@ export default function Transactions() {
         method: item.method,
       };
     });
-  }, [payment_method_breakdown]);
+  }, [serverData]);
+
+  // Active series for the togglable BarChart
+  const activeSeries = React.useMemo(() => {
+    return chartView === 'volume' 
+      ? [{ dataKey: 'volume', name: 'Transaction Volume (GHS)', color: '#0F766E' }]
+      : [{ dataKey: 'count', name: 'Transaction Count', color: '#3B82F6' }];
+  }, [chartView]);
+
+  if (isLoading || !serverData) {
+    return (
+      <div className="flex h-72 w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 rounded-full border-4 border-muted border-t-primary animate-spin" />
+          <p className="text-sm text-muted-foreground font-medium tracking-wide">Loading transactions details…</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { summary, chart_data, payment_method_breakdown, top_tenants, failed_transactions } = serverData;
 
   // Color schemes for methods: Cash (emerald), MoMo (amber), Card (blue), Credit (indigo)
   const COLORS = ['#10B981', '#F59E0B', '#3B82F6', '#6366F1'];
@@ -228,13 +140,6 @@ export default function Transactions() {
       cell: ({ row }) => <span className="text-muted-foreground">{formatGHS(row.original.avg_transaction_value)}</span>,
     },
   ];
-
-  // Active series for the togglable BarChart
-  const activeSeries = React.useMemo(() => {
-    return chartView === 'volume' 
-      ? [{ dataKey: 'volume', name: 'Transaction Volume (GHS)', color: '#0F766E' }]
-      : [{ dataKey: 'count', name: 'Transaction Count', color: '#3B82F6' }];
-  }, [chartView]);
 
   return (
     <div className="space-y-6">

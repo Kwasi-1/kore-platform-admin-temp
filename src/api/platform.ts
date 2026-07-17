@@ -46,10 +46,10 @@ export const getRevenueAnalytics = async (startDate: string, endDate: string, gr
 };
 
 export const getPlatformTenants = async (params?: { limit?: number; sort?: string }) => {
-  const { data } = await apiClient.get<Tenant[]>('/api/v1/platform/tenants', {
+  const { data } = await apiClient.get<any>('/api/v1/platform/tenants', {
     params,
   });
-  return data;
+  return (data?.success?.data?.tenants || data) as Tenant[];
 };
 
 export interface PlatformTenantsResponse {
@@ -202,10 +202,10 @@ export interface PlatformRevenueDetails {
 }
 
 export const getDetailedRevenueAnalytics = async (startDate: string, endDate: string, groupBy = 'day') => {
-  const { data } = await apiClient.get<PlatformRevenueDetails>('/api/v1/platform/analytics/revenue/detailed', {
+  const { data } = await apiClient.get<any>('/api/v1/platform/analytics/revenue/detailed', {
     params: { start_date: startDate, end_date: endDate, group_by: groupBy },
   });
-  return data;
+  return (data?.success?.data || data) as PlatformRevenueDetails;
 };
 
 export interface PlatformTransactionDetails {
@@ -243,10 +243,10 @@ export interface PlatformTransactionDetails {
 }
 
 export const getDetailedTransactionAnalytics = async (startDate: string, endDate: string) => {
-  const { data } = await apiClient.get<PlatformTransactionDetails>('/api/v1/platform/analytics/transactions/detailed', {
+  const { data } = await apiClient.get<any>('/api/v1/platform/analytics/transactions/detailed', {
     params: { start_date: startDate, end_date: endDate },
   });
-  return data;
+  return (data?.success?.data || data) as PlatformTransactionDetails;
 };
 
 export interface PlatformSettingsData {

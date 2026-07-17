@@ -33,6 +33,7 @@ export default function TenantList() {
   const [searchQuery, setSearchQuery] = React.useState<string>('');
   const [pageIndex, setPageIndex] = React.useState<number>(0);
   const pageSize = 10;
+  const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true';
 
   // React Query fetch
   const { data: serverData, isLoading } = useQuery({
@@ -56,62 +57,17 @@ export default function TenantList() {
     },
   });
 
-  // Mock Fallback Data (Demo / Offline mode)
-  const fallbackTenantsList: Tenant[] = [
-    { id: 'tn-01', business_name: "Kofi's Provisions", plan: 'full_suite', is_active: true, date_created: '2026-06-01', api_key_prefix: 'ab12', monthly_revenue: 12500, transaction_count: 340 },
-    { id: 'tn-02', business_name: 'Accra Groceries', plan: 'pos_only', is_active: true, date_created: '2026-05-28', api_key_prefix: 'cd34', monthly_revenue: 8400, transaction_count: 210 },
-    { id: 'tn-03', business_name: 'Osu Fashion Hub', plan: 'ecommerce_only', is_active: true, date_created: '2026-05-25', api_key_prefix: 'ef56', monthly_revenue: 6200, transaction_count: 150 },
-    { id: 'tn-04', business_name: 'Kumasi Tech Store', plan: 'full_suite', is_active: true, date_created: '2026-05-20', api_key_prefix: 'gh78', monthly_revenue: 15400, transaction_count: 420 },
-    { id: 'tn-05', business_name: 'Apex Pharmacy', plan: 'pos_only', is_active: false, date_created: '2026-05-18', api_key_prefix: 'ij90', monthly_revenue: 0, transaction_count: 0 },
-    { id: 'tn-06', business_name: 'Tema Logistics', plan: 'full_suite', is_active: true, date_created: '2026-05-15', api_key_prefix: 'kl12', monthly_revenue: 22000, transaction_count: 510 },
-    { id: 'tn-07', business_name: 'Spintex Bakery', plan: 'pos_only', is_active: true, date_created: '2026-05-12', api_key_prefix: 'mn34', monthly_revenue: 4300, transaction_count: 110 },
-    { id: 'tn-08', business_name: 'East Legon Cafe', plan: 'ecommerce_only', is_active: true, date_created: '2026-05-10', api_key_prefix: 'op56', monthly_revenue: 9500, transaction_count: 280 },
-    { id: 'tn-09', business_name: 'Labadi Beach Rentals', plan: 'pos_only', is_active: true, date_created: '2026-05-08', api_key_prefix: 'qr78', monthly_revenue: 3100, transaction_count: 85 },
-    { id: 'tn-10', business_name: 'Cantonments Boutique', plan: 'full_suite', is_active: false, date_created: '2026-05-05', api_key_prefix: 'st90', monthly_revenue: 0, transaction_count: 0 },
-    { id: 'tn-11', business_name: 'Airport Residential MiniMart', plan: 'pos_only', is_active: true, date_created: '2026-05-02', api_key_prefix: 'uv12', monthly_revenue: 11200, transaction_count: 305 },
-    { id: 'tn-12', business_name: 'Ridge Dental Clinic', plan: 'ecommerce_only', is_active: true, date_created: '2026-04-28', api_key_prefix: 'wx34', monthly_revenue: 7200, transaction_count: 195 },
-    { id: 'tn-13', business_name: 'West Hills Supermarket', plan: 'full_suite', is_active: true, date_created: '2026-04-25', api_key_prefix: 'yz56', monthly_revenue: 28400, transaction_count: 670 },
-    { id: 'tn-14', business_name: 'Dansoman Bookshop', plan: 'pos_only', is_active: true, date_created: '2026-04-22', api_key_prefix: 'ab56', monthly_revenue: 2900, transaction_count: 70 },
-    { id: 'tn-15', business_name: 'Madina Electronics', plan: 'ecommerce_only', is_active: true, date_created: '2026-04-18', api_key_prefix: 'cd78', monthly_revenue: 5600, transaction_count: 140 },
-  ];
-
-  const [localMockTenants, setLocalMockTenants] = React.useState<Tenant[]>(fallbackTenantsList);
-
-  const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true';
-
-  // Locally apply filter/search for Demo Mode
-  const filteredMockTenants = localMockTenants.filter((t) => {
-    const matchesSearch = t.business_name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPlan = planFilter === 'all' || t.plan === planFilter;
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'active' && t.is_active) || 
-      (statusFilter === 'suspended' && !t.is_active);
-    
-    return matchesSearch && matchesPlan && matchesStatus;
-  });
-
-  const pageCountMock = Math.ceil(filteredMockTenants.length / pageSize);
-  const paginatedMockTenants = filteredMockTenants.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
-
   // Active data resolution
-  const displayTenants = serverData?.tenants || paginatedMockTenants;
-  const pageCount = serverData ? (serverData.page_count || 1) : pageCountMock;
+  const displayTenants = serverData?.tenants || [];
+  const pageCount = serverData?.page_count || 1;
 
   // Toggle activation status
   const handleToggleStatus = (tenant: Tenant) => {
     const newStatus = !tenant.is_active;
-    
-    if (isDemoMode) {
-      setLocalMockTenants(prev => 
-        prev.map(t => t.id === tenant.id ? { ...t, is_active: newStatus } : t)
-      );
-      toast.success(`Tenant '${tenant.business_name}' status updated to ${newStatus ? 'Active' : 'Suspended'}.`);
-      return;
-    }
 
     toggleMutation.mutate({ id: tenant.id, is_active: newStatus }, {
       onSuccess: () => {
-        toast.success(`Tenant '${tenant.business_name}' status updated.`);
+        toast.success(`Tenant '${tenant.business_name}' status updated to ${newStatus ? 'Active' : 'Suspended'}.`);
       },
       onError: () => {
         toast.error('Failed to update tenant status.');

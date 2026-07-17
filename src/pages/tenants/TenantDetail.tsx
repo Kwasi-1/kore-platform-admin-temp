@@ -35,6 +35,7 @@ import clsx from 'clsx';
 
 export default function TenantDetail() {
   const { id } = useParams<{ id: string }>();
+  const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { formatGHS } = useCurrency();
@@ -108,19 +109,11 @@ export default function TenantDetail() {
     ],
   };
 
-  const [localData, setLocalData] = React.useState<TenantDetailResponse | null>(null);
-
   React.useEffect(() => {
     if (serverDetailData) {
-      setLocalData(serverDetailData);
       setSelectedPlan(serverDetailData.tenant.plan);
-    } else {
-      setLocalData(fallbackDetail);
-      setSelectedPlan(fallbackDetail.tenant.plan);
     }
   }, [serverDetailData]);
-
-  const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true';
 
   // Mutations
   const updateMutation = useMutation({
@@ -145,16 +138,6 @@ export default function TenantDetail() {
 
   // Action handlers
   const handleEditPlan = async () => {
-    if (isDemoMode) {
-      setLocalData(prev => prev ? {
-        ...prev,
-        tenant: { ...prev.tenant, plan: selectedPlan as any }
-      } : null);
-      toast.success('Subscription plan updated (Demo Mode).');
-      setIsEditingPlan(false);
-      return;
-    }
-
     updateMutation.mutate({ plan: selectedPlan as any }, {
       onSuccess: () => {
         toast.success('Subscription plan updated.');
@@ -167,40 +150,11 @@ export default function TenantDetail() {
   };
 
   const handleRotateKey = async () => {
-    if (isDemoMode) {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const entropy = Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-      const mockKey = `hpos_live_${entropy}`;
-      
-      setNewApiKey(mockKey);
-      
-      // Update local prefix
-      setLocalData(prev => prev ? {
-        ...prev,
-        tenant: { ...prev.tenant, api_key_prefix: entropy.substring(0, 4) }
-      } : null);
-
-      setIsRotateConfirmOpen(false);
-      setIsRevealOpen(true);
-      toast.success('API Key rotated (Demo Mode).');
-      return;
-    }
-
     rotateKeyMutation.mutate();
     setIsRotateConfirmOpen(false);
   };
 
   const handleSuspend = async (reason?: string) => {
-    if (isDemoMode) {
-      setLocalData(prev => prev ? {
-        ...prev,
-        tenant: { ...prev.tenant, is_active: false }
-      } : null);
-      toast.success('Tenant suspended (Demo Mode).');
-      setIsSuspendConfirmOpen(false);
-      return;
-    }
-
     updateMutation.mutate({ is_active: false }, {
       onSuccess: () => {
         toast.success('Tenant suspended successfully.');
@@ -213,16 +167,6 @@ export default function TenantDetail() {
   };
 
   const handleReactivate = async () => {
-    if (isDemoMode) {
-      setLocalData(prev => prev ? {
-        ...prev,
-        tenant: { ...prev.tenant, is_active: true }
-      } : null);
-      toast.success('Tenant reactivated (Demo Mode).');
-      setIsReactivateConfirmOpen(false);
-      return;
-    }
-
     updateMutation.mutate({ is_active: true }, {
       onSuccess: () => {
         toast.success('Tenant reactivated successfully.');
@@ -246,7 +190,7 @@ export default function TenantDetail() {
     return 'secondary';
   };
 
-  if (isLoading || !localData) {
+  if (isLoading || !serverDetailData) {
     return (
       <div className="flex h-72 w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -257,7 +201,7 @@ export default function TenantDetail() {
     );
   }
 
-  const { tenant, metrics, owner, recent_transactions, storefront_deployment, staff } = localData;
+  const { tenant, metrics, owner, recent_transactions, storefront_deployment, staff } = serverDetailData;
 
   return (
     <div className="space-y-6">
