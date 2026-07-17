@@ -24,10 +24,20 @@ import {
   ChevronRight
 } from 'lucide-react';
 import clsx from 'clsx';
+import PageLayout from '@/components/layout/PageLayout';
+import { usePlatformAuthStore } from '@/store/platformAuthStore';
 
 export default function Overview() {
   const navigate = useNavigate();
   const { formatGHS } = useCurrency();
+  const { adminUser } = usePlatformAuthStore();
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
 
   // Range: last 30 days
   const today = new Date();
@@ -134,211 +144,211 @@ export default function Overview() {
     return 'POS Only';
   };
 
+  const userName = adminUser?.name?.split(' ')[0] || 'Admin';
+
   return (
-    <div className="space-y-6">
-      {/* Title & Info Bar */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold font-header tracking-tight text-foreground">Dashboard</h2>
-            {isDemoMode && (
-              <span className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                Demo Mode
+    <PageLayout
+      title={`${getGreeting()}, ${userName}`}
+      subtitle="Welcome to the HeadlessPOS Platform Admin Panel."
+      actions={
+        isDemoMode ? (
+          <span className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+            Demo Mode
+          </span>
+        ) : undefined
+      }
+      className="md:mt-2"
+    >
+      <div className="space-y-6">
+        {/* 1. Stat Cards Row */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <DashboardCard
+            title="Active Tenants"
+            value={summary.active_tenants}
+            subvalue={
+              <span className="text-xs text-green-500 font-medium">
+                +8.4% from last month
               </span>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground mt-0.5">Welcome to the HeadlessPOS Platform Admin Panel.</p>
-        </div>
-      </div>
-
-      {/* 1. Stat Cards Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <DashboardCard
-          title="Active Tenants"
-          value={summary.active_tenants}
-          subvalue={
-            <span className="text-xs text-green-500 font-medium">
-              +8.4% from last month
-            </span>
-          }
-          action={<Users className="h-5 w-5 text-muted-foreground" />}
-        />
-        <DashboardCard
-          title="Revenue This Month"
-          value={formatGHS(summary.platform_revenue_this_month)}
-          subvalue={
-            <span className="text-xs text-green-500 font-medium">
-              +12.1% from last month
-            </span>
-          }
-          action={<BarChart3 className="h-5 w-5 text-muted-foreground" />}
-        />
-        <DashboardCard
-          title="Transactions Today"
-          value={summary.transactions_today}
-          subvalue="Across all storefront terminals"
-          action={<ArrowLeftRight className="h-5 w-5 text-muted-foreground" />}
-        />
-        <DashboardCard
-          title="New Tenants This Month"
-          value={summary.new_tenants_this_month}
-          subvalue="Monthly Target: 20"
-          action={<UserPlus className="h-5 w-5 text-muted-foreground" />}
-        />
-      </div>
-
-      {/* 2. Charts Section */}
-      <div className="grid gap-6 md:grid-cols-7">
-        {/* Revenue Line Chart */}
-        <div className="md:col-span-5 bg-card border border-border rounded-xl p-6 flex flex-col justify-between">
-          <div className="mb-4">
-            <h3 className="text-lg font-bold font-header text-foreground">Revenue Trend</h3>
-            <p className="text-xs text-muted-foreground">Daily platform revenue generated over the last 30 days</p>
-          </div>
-          <div className="h-80 w-full">
-            <LineChart
-              data={chartData}
-              xKey="date"
-              series={[{ dataKey: 'revenue', name: 'Revenue (GHS)', color: '#84cc16' }]}
-              height={300}
-            />
-          </div>
+            }
+            action={<Users className="h-5 w-5 text-muted-foreground" />}
+          />
+          <DashboardCard
+            title="Revenue This Month"
+            value={formatGHS(summary.platform_revenue_this_month)}
+            subvalue={
+              <span className="text-xs text-green-500 font-medium">
+                +12.1% from last month
+              </span>
+            }
+            action={<BarChart3 className="h-5 w-5 text-muted-foreground" />}
+          />
+          <DashboardCard
+            title="Transactions Today"
+            value={summary.transactions_today}
+            subvalue="Across all storefront terminals"
+            action={<ArrowLeftRight className="h-5 w-5 text-muted-foreground" />}
+          />
+          <DashboardCard
+            title="New Tenants This Month"
+            value={summary.new_tenants_this_month}
+            subvalue="Monthly Target: 20"
+            action={<UserPlus className="h-5 w-5 text-muted-foreground" />}
+          />
         </div>
 
-        {/* Plan Distribution */}
-        <div className="md:col-span-2 bg-card border border-border rounded-xl p-6 flex flex-col justify-between">
-          <div>
-            <h3 className="text-lg font-bold font-header text-foreground">Plans Distribution</h3>
-            <p className="text-xs text-muted-foreground mb-6">Active subscription breakdowns</p>
-            
-            <div className="space-y-5">
-              {summary.plan_distribution.map((item) => {
-                // Color indicators
-                const colorBar = item.plan === 'full_suite' 
-                  ? 'bg-primary' 
-                  : item.plan === 'ecommerce_only' 
-                    ? 'bg-blue-500' 
-                    : 'bg-slate-400';
-                
-                return (
-                  <div key={item.plan} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className="text-foreground">{getPlanName(item.plan)}</span>
-                      <span className="text-muted-foreground">
-                        {item.count} ({item.percentage}%)
-                      </span>
-                    </div>
-                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
-                      <div 
-                        className={clsx("h-full rounded-full transition-all duration-300", colorBar)} 
-                        style={{ width: `${item.percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+        {/* 2. Charts Section */}
+        <div className="grid gap-6 md:grid-cols-7">
+          {/* Revenue Line Chart */}
+          <div className="md:col-span-5 bg-card border border-border rounded-xl p-6 flex flex-col justify-between">
+            <div className="mb-4">
+              <h3 className="text-lg font-bold font-header text-foreground">Revenue Trend</h3>
+              <p className="text-xs text-muted-foreground">Daily platform revenue generated over the last 30 days</p>
+            </div>
+            <div className="h-80 w-full">
+              <LineChart
+                data={chartData}
+                xKey="date"
+                series={[{ dataKey: 'revenue', name: 'Revenue (GHS)', color: '#84cc16' }]}
+                height={300}
+              />
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-            <span>Total Tiers Gated</span>
-            <span className="font-semibold text-foreground">3 Modules</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Recent Tenants & Activity Timeline */}
-      <div className="grid gap-6 md:grid-cols-7">
-        {/* Recent Tenants Table */}
-        <div className="md:col-span-4 bg-card border border-border rounded-xl p-6 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-bold font-header text-foreground">Recent Tenants</h3>
-                <p className="text-xs text-muted-foreground">Latest registered business merchants</p>
-              </div>
-              <button 
-                onClick={() => navigate('/tenants')}
-                className="text-xs text-primary font-semibold hover:underline flex items-center gap-1"
-              >
-                All Tenants <ChevronRight className="h-3 w-3" />
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-border text-xs text-muted-foreground font-semibold">
-                    <th className="py-3 pr-4">Business Name</th>
-                    <th className="py-3 px-4">Plan</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4">Created</th>
-                    <th className="py-3 pl-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border text-xs text-foreground">
-                  {tenants.map((t) => (
-                    <tr key={t.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-3 pr-4 font-semibold">{t.business_name}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={getPlanBadgeVariant(t.plan)}>
-                          {getPlanName(t.plan)}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4">
-                        <StatusBadge status={t.is_active ? 'success' : 'failed'} />
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground">{t.date_created}</td>
-                      <td className="py-3 pl-4 text-right">
-                        <button
-                          onClick={() => navigate(`/tenants/${t.id}`)}
-                          className="px-2.5 py-1 rounded bg-secondary text-secondary-foreground font-medium hover:bg-secondary/80 border border-border transition-colors flex items-center gap-1 ml-auto"
-                        >
-                          View <ExternalLink className="h-3 w-3" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* Activity Timeline */}
-        <div className="md:col-span-3 bg-card border border-border rounded-xl p-6 flex flex-col justify-between">
-          <div>
-            <h3 className="text-lg font-bold font-header text-foreground mb-1">Recent Activity</h3>
-            <p className="text-xs text-muted-foreground mb-6">Live system logs and operator interactions</p>
-
-            <div className="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-border">
-              {activities.map((act) => {
-                const Icon = act.icon;
-                return (
-                  <div key={act.id} className="relative flex items-start gap-3 group">
-                    {/* Circle Node */}
-                    <div className={clsx(
-                      "absolute left-[-26px] top-0.5 rounded-full p-1.5 z-10 border border-border flex items-center justify-center",
-                      act.color
-                    )}>
-                      <Icon className="h-3 w-3" />
-                    </div>
-
-                    {/* Content */}
-                    <div className="space-y-0.5 flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <h4 className="text-xs font-semibold text-foreground truncate">{act.title}</h4>
-                        <span className="text-[10px] text-muted-foreground shrink-0">{act.time}</span>
+          {/* Plan Distribution */}
+          <div className="md:col-span-2 bg-card border border-border rounded-xl p-6 flex flex-col justify-between">
+            <div>
+              <h3 className="text-lg font-bold font-header text-foreground">Plans Distribution</h3>
+              <p className="text-xs text-muted-foreground mb-6">Active subscription breakdowns</p>
+              
+              <div className="space-y-5">
+                {summary.plan_distribution.map((item) => {
+                  // Color indicators
+                  const colorBar = item.plan === 'full_suite' 
+                    ? 'bg-primary' 
+                    : item.plan === 'ecommerce_only' 
+                      ? 'bg-blue-500' 
+                      : 'bg-slate-400';
+                  
+                  return (
+                    <div key={item.plan} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className="text-foreground">{getPlanName(item.plan)}</span>
+                        <span className="text-muted-foreground">
+                          {item.count} ({item.percentage}%)
+                        </span>
                       </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{act.description}</p>
+                      <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                        <div 
+                          className={clsx("h-full rounded-full transition-all duration-300", colorBar)} 
+                          style={{ width: `${item.percentage}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+              <span>Total Tiers Gated</span>
+              <span className="font-semibold text-foreground">3 Modules</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Recent Tenants & Activity Timeline */}
+        <div className="grid gap-6 md:grid-cols-7">
+          {/* Recent Tenants Table */}
+          <div className="md:col-span-4 bg-card border border-border rounded-xl p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold font-header text-foreground">Recent Tenants</h3>
+                  <p className="text-xs text-muted-foreground">Latest registered business merchants</p>
+                </div>
+                <button 
+                  onClick={() => navigate('/tenants')}
+                  className="text-xs text-primary font-semibold hover:underline flex items-center gap-1"
+                >
+                  All Tenants <ChevronRight className="h-3 w-3" />
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-border text-xs text-muted-foreground font-semibold">
+                      <th className="py-3 pr-4">Business Name</th>
+                      <th className="py-3 px-4">Plan</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Created</th>
+                      <th className="py-3 pl-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border text-xs text-foreground">
+                    {tenants.map((t) => (
+                      <tr key={t.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="py-3 pr-4 font-semibold">{t.business_name}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant={getPlanBadgeVariant(t.plan)}>
+                            {getPlanName(t.plan)}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <StatusBadge status={t.is_active ? 'success' : 'failed'} />
+                        </td>
+                        <td className="py-3 px-4 text-muted-foreground">{t.date_created}</td>
+                        <td className="py-3 pl-4 text-right">
+                          <button
+                            onClick={() => navigate(`/tenants/${t.id}`)}
+                            className="px-2.5 py-1 rounded bg-secondary text-secondary-foreground font-medium hover:bg-secondary/80 border border-border transition-colors flex items-center gap-1 ml-auto"
+                          >
+                            View <ExternalLink className="h-3 w-3" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Activity Timeline */}
+          <div className="md:col-span-3 bg-card border border-border rounded-xl p-6 flex flex-col justify-between">
+            <div>
+              <h3 className="text-lg font-bold font-header text-foreground mb-1">Recent Activity</h3>
+              <p className="text-xs text-muted-foreground mb-6">Live system logs and operator interactions</p>
+
+              <div className="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-border">
+                {activities.map((act) => {
+                  const Icon = act.icon;
+                  return (
+                    <div key={act.id} className="relative flex items-start gap-3 group">
+                      {/* Circle Node */}
+                      <div className={clsx(
+                        "absolute left-[-26px] top-0.5 rounded-full p-1.5 z-10 border border-border flex items-center justify-center",
+                        act.color
+                      )}>
+                        <Icon className="h-3 w-3" />
+                      </div>
+
+                      {/* Content */}
+                      <div className="space-y-0.5 flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="text-xs font-semibold text-foreground truncate">{act.title}</h4>
+                          <span className="text-[10px] text-muted-foreground shrink-0">{act.time}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{act.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 }

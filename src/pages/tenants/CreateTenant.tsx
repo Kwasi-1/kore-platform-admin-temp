@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ApiKeyRevealModal from '@/components/tenants/ApiKeyRevealModal';
-import { ChevronLeft, Info, HelpCircle } from 'lucide-react';
+import { ChevronLeft, Info, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import clsx from 'clsx';
+
+const DEFAULT_TENANT_PASSWORD = 'Welcome@123';
 
 export default function CreateTenant() {
   const navigate = useNavigate();
@@ -22,7 +24,10 @@ export default function CreateTenant() {
     tenantName: string;
     tenantPlan: string;
     tenantId: string;
+    ownerEmail?: string;
+    ownerPassword?: string;
   } | null>(null);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   // We detect demo mode if there is no server connection, or we can check via config
   // Let's check using a dummy query or env variable
@@ -36,7 +41,7 @@ export default function CreateTenant() {
     owner_last_name: '',
     owner_email: '',
     owner_phone: '',
-    owner_password: '',
+    owner_password: DEFAULT_TENANT_PASSWORD,
   };
 
   // Validation Schema with Ghana phone format check
@@ -71,12 +76,14 @@ export default function CreateTenant() {
   // Mutator for real backend
   const mutation = useMutation({
     mutationFn: createTenant,
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       setRevealData({
         apiKey: data.api_key,
         tenantName: data.tenant.business_name,
         tenantPlan: data.tenant.plan,
         tenantId: data.tenant.id,
+        ownerEmail: variables.owner_email,
+        ownerPassword: variables.owner_password,
       });
       setModalOpen(true);
     },
@@ -105,6 +112,8 @@ export default function CreateTenant() {
           tenantName: values.business_name,
           tenantPlan: values.plan,
           tenantId: 'tn-mock-' + Math.random().toString(36).substring(2, 9),
+          ownerEmail: values.owner_email,
+          ownerPassword: values.owner_password,
         });
         setModalOpen(true);
         toast.success('Tenant created locally (Demo Mode).');
@@ -298,20 +307,30 @@ export default function CreateTenant() {
                 {/* Owner Password */}
                 <div className="space-y-1.5">
                   <Label htmlFor="owner_password">Owner Password</Label>
-                  <Field
-                    as={Input}
-                    id="owner_password"
-                    name="owner_password"
-                    type="password"
-                    placeholder="••••••••"
-                    className={clsx(
-                      "rounded-xl h-10",
-                      touched.owner_password && errors.owner_password && "border-red-500 focus:ring-red-500"
-                    )}
-                  />
-                  {touched.owner_password && errors.owner_password && (
-                    <p className="text-xs text-red-500 font-semibold">{errors.owner_password}</p>
-                  )}
+                  <div className="relative">
+                    <Field
+                      as={Input}
+                      id="owner_password"
+                      name="owner_password"
+                      type={showPassword ? "text" : "password"}
+                      readOnly={true}
+                      className="rounded-xl h-10 pr-10 bg-muted/40 cursor-default border-zinc-700/60 focus:ring-0 focus:border-border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    A default password is set for security. The tenant owner can change this password after logging into their portal.
+                  </p>
                 </div>
 
                 {/* Note */}
@@ -346,6 +365,8 @@ export default function CreateTenant() {
           apiKey={revealData.apiKey}
           tenantName={revealData.tenantName}
           tenantPlan={revealData.tenantPlan}
+          ownerEmail={revealData.ownerEmail}
+          ownerPassword={revealData.ownerPassword}
           onDone={() => {
             setModalOpen(false);
             navigate(`/tenants/${revealData.tenantId}`);

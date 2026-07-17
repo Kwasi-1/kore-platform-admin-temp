@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import clsx from 'clsx';
+import PageLayout from '@/components/layout/PageLayout';
 
 export default function TenantList() {
   const navigate = useNavigate();
@@ -196,27 +197,15 @@ export default function TenantList() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header Row */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold font-header tracking-tight text-foreground">Tenants</h2>
-            {isDemoMode && (
-              <span className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                Demo Mode
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground mt-0.5">Manage and provision business storefront merchants.</p>
-        </div>
+    <PageLayout title="Tenants" subtitle="Manage and provision business storefront merchants." actions={ (
         <Button 
           onClick={() => navigate('/tenants/new')}
           className="bg-primary text-primary-foreground hover:bg-primary/95 flex items-center gap-1"
         >
           <Plus className="h-4 w-4" /> Add Tenant
         </Button>
-      </div>
+      )} >
+    <div className="space-y-6">
 
       {/* Filter Bar Card */}
       <div className="bg-card border border-border rounded-xl p-4 space-y-4">
@@ -289,5 +278,6 @@ export default function TenantList() {
         />
       </div>
     </div>
+    </PageLayout>
   );
 }

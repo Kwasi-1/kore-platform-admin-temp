@@ -15,6 +15,8 @@ interface ApiKeyRevealModalProps {
   apiKey: string;
   tenantName: string;
   tenantPlan: string;
+  ownerEmail?: string;
+  ownerPassword?: string;
   onDone: () => void;
 }
 
@@ -23,6 +25,8 @@ export default function ApiKeyRevealModal({
   apiKey,
   tenantName,
   tenantPlan,
+  ownerEmail,
+  ownerPassword,
   onDone,
 }: ApiKeyRevealModalProps) {
   const [copied, setCopied] = React.useState(false);
@@ -95,7 +99,7 @@ export default function ApiKeyRevealModal({
                   <span className="text-green-500 font-bold">Copied ✓</span>
                 ) : (
                   <>
-                    <Copy className="h-3.5 w-3.5" /> Copy
+                     <Copy className="h-3.5 w-3.5" /> Copy
                   </>
                 )}
               </Button>
@@ -112,6 +116,18 @@ export default function ApiKeyRevealModal({
               <span className="text-muted-foreground">Plan Tier:</span>
               <span className="font-semibold text-foreground">{getPlanName(tenantPlan)}</span>
             </div>
+            {ownerEmail && (
+              <div className="flex justify-between border-t border-border/40 pt-2 mt-2">
+                <span className="text-muted-foreground">Owner Account:</span>
+                <span className="font-semibold text-foreground">{ownerEmail}</span>
+              </div>
+            )}
+            {ownerPassword && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Default Password:</span>
+                <span className="font-semibold text-foreground font-mono">{ownerPassword}</span>
+              </div>
+            )}
           </div>
 
           {/* Confirmation Checkbox */}
