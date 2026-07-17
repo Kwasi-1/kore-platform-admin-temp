@@ -26,15 +26,17 @@ export default function CreateTenant() {
 
   // We detect demo mode if there is no server connection, or we can check via config
   // Let's check using a dummy query or env variable
-  const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true' || true; // Set true for visual fallbacks if API is offline
+  const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true';
 
   // Form values
   const initialValues = {
     business_name: '',
     plan: 'pos_only' as 'pos_only' | 'ecommerce_only' | 'full_suite',
-    owner_name: '',
+    owner_first_name: '',
+    owner_last_name: '',
     owner_email: '',
     owner_phone: '',
+    owner_password: '',
   };
 
   // Validation Schema with Ghana phone format check
@@ -45,12 +47,18 @@ export default function CreateTenant() {
     plan: Yup.string()
       .oneOf(['pos_only', 'ecommerce_only', 'full_suite'])
       .required('Plan is required'),
-    owner_name: Yup.string()
-      .min(2, 'Owner name must be at least 2 characters')
-      .required('Owner name is required'),
+    owner_first_name: Yup.string()
+      .min(2, 'First name must be at least 2 characters')
+      .required('First name is required'),
+    owner_last_name: Yup.string()
+      .min(2, 'Last name must be at least 2 characters')
+      .required('Last name is required'),
     owner_email: Yup.string()
       .email('Invalid email address')
       .required('Owner email is required'),
+    owner_password: Yup.string()
+      .min(8, 'Password must be at least 8 characters')
+      .required('Password is required'),
     owner_phone: Yup.string()
       .optional()
       .test('ghana-phone', 'Invalid Ghana phone format (use +233... or 10 digits)', (value) => {
@@ -107,9 +115,11 @@ export default function CreateTenant() {
       mutation.mutate({
         business_name: values.business_name,
         plan: values.plan,
-        owner_name: values.owner_name,
+        owner_first_name: values.owner_first_name,
+        owner_last_name: values.owner_last_name,
         owner_email: values.owner_email,
         owner_phone: values.owner_phone || undefined,
+        owner_password: values.owner_password,
       }, {
         onSettled: () => setSubmitting(false)
       });
@@ -212,22 +222,40 @@ export default function CreateTenant() {
                   <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">Owner Account</h3>
                 </div>
 
-                {/* Owner Name */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="owner_name">Owner Full Name</Label>
-                  <Field
-                    as={Input}
-                    id="owner_name"
-                    name="owner_name"
-                    placeholder="e.g. Kwame Mensah"
-                    className={clsx(
-                      "rounded-xl h-10",
-                      touched.owner_name && errors.owner_name && "border-red-500 focus:ring-red-500"
+                {/* Owner Name Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="owner_first_name">Owner First Name</Label>
+                    <Field
+                      as={Input}
+                      id="owner_first_name"
+                      name="owner_first_name"
+                      placeholder="e.g. Kwame"
+                      className={clsx(
+                        "rounded-xl h-10",
+                        touched.owner_first_name && errors.owner_first_name && "border-red-500 focus:ring-red-500"
+                      )}
+                    />
+                    {touched.owner_first_name && errors.owner_first_name && (
+                      <p className="text-xs text-red-500 font-semibold">{errors.owner_first_name}</p>
                     )}
-                  />
-                  {touched.owner_name && errors.owner_name && (
-                    <p className="text-xs text-red-500 font-semibold">{errors.owner_name}</p>
-                  )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="owner_last_name">Owner Last Name</Label>
+                    <Field
+                      as={Input}
+                      id="owner_last_name"
+                      name="owner_last_name"
+                      placeholder="e.g. Mensah"
+                      className={clsx(
+                        "rounded-xl h-10",
+                        touched.owner_last_name && errors.owner_last_name && "border-red-500 focus:ring-red-500"
+                      )}
+                    />
+                    {touched.owner_last_name && errors.owner_last_name && (
+                      <p className="text-xs text-red-500 font-semibold">{errors.owner_last_name}</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Owner Email */}
@@ -267,11 +295,30 @@ export default function CreateTenant() {
                   )}
                 </div>
 
+                {/* Owner Password */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="owner_password">Owner Password</Label>
+                  <Field
+                    as={Input}
+                    id="owner_password"
+                    name="owner_password"
+                    type="password"
+                    placeholder="••••••••"
+                    className={clsx(
+                      "rounded-xl h-10",
+                      touched.owner_password && errors.owner_password && "border-red-500 focus:ring-red-500"
+                    )}
+                  />
+                  {touched.owner_password && errors.owner_password && (
+                    <p className="text-xs text-red-500 font-semibold">{errors.owner_password}</p>
+                  )}
+                </div>
+
                 {/* Note */}
                 <div className="flex gap-2 text-xs text-muted-foreground mt-2">
                   <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
                   <p>
-                    An owner staff account will be created automatically. The owner will need to set their password via the password reset flow.
+                    An owner staff account will be created automatically. The owner can use these credentials to log in to the POS admin portal immediately.
                   </p>
                 </div>
               </div>

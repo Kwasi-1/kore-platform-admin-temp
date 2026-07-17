@@ -65,23 +65,37 @@ export const getPlatformTenantsPaginated = async (params: {
   status?: string;
   search?: string;
 }) => {
-  const { data } = await apiClient.get<PlatformTenantsResponse>('/api/v1/platform/tenants', {
-    params,
+  const backendParams: any = {
+    page: params.page,
+    per_page: params.limit,
+    status: params.status,
+    search: params.search,
+  };
+  const { data } = await apiClient.get<any>('/api/v1/platform/tenants', {
+    params: backendParams,
   });
-  return data;
+  
+  const resData = data?.success?.data;
+  return {
+    tenants: resData?.tenants || [],
+    page_count: resData?.pagination?.total_pages || 1,
+    total_count: resData?.pagination?.total_items || 0,
+  } as PlatformTenantsResponse;
 };
 
 export const updateTenant = async (id: string, updates: Partial<Tenant>) => {
-  const { data } = await apiClient.put<Tenant>(`/api/v1/platform/tenants/${id}`, updates);
-  return data;
+  const { data } = await apiClient.put<any>(`/api/v1/platform/tenants/${id}`, updates);
+  return (data?.success?.data?.tenant || data) as Tenant;
 };
 
 export interface CreateTenantPayload {
   business_name: string;
   plan: 'pos_only' | 'ecommerce_only' | 'full_suite';
-  owner_name: string;
+  owner_first_name: string;
+  owner_last_name: string;
   owner_email: string;
   owner_phone?: string;
+  owner_password?: string;
 }
 
 export interface CreateTenantResponse {
@@ -90,8 +104,21 @@ export interface CreateTenantResponse {
 }
 
 export const createTenant = async (payload: CreateTenantPayload) => {
-  const { data } = await apiClient.post<CreateTenantResponse>('/api/v1/platform/tenants', payload);
-  return data;
+  const backendPayload = {
+    businessName: payload.business_name,
+    plan: payload.plan,
+    ownerFirstName: payload.owner_first_name,
+    ownerLastName: payload.owner_last_name,
+    ownerEmail: payload.owner_email,
+    ownerPhone: payload.owner_phone,
+    ownerPassword: payload.owner_password,
+  };
+  const { data } = await apiClient.post<any>('/api/v1/platform/tenants', backendPayload);
+  const resData = data?.success?.data || {};
+  return {
+    tenant: resData.tenant,
+    api_key: resData.api_key,
+  } as CreateTenantResponse;
 };
 
 export interface TenantDetailResponse {
@@ -134,13 +161,16 @@ export interface TenantDetailResponse {
 }
 
 export const getPlatformTenantDetail = async (id: string) => {
-  const { data } = await apiClient.get<TenantDetailResponse>(`/api/v1/platform/tenants/${id}`);
-  return data;
+  const { data } = await apiClient.get<any>(`/api/v1/platform/tenants/${id}`);
+  return (data?.success?.data || data) as TenantDetailResponse;
 };
 
 export const rotateTenantApiKey = async (id: string) => {
-  const { data } = await apiClient.post<{ api_key: string }>(`/api/v1/platform/tenants/${id}/rotate-key`);
-  return data;
+  const { data } = await apiClient.post<any>(`/api/v1/platform/tenants/${id}/api-key`);
+  const resData = data?.success?.data || {};
+  return {
+    api_key: resData.api_key || resData.apiKey,
+  };
 };
 
 export interface PlatformRevenueDetails {

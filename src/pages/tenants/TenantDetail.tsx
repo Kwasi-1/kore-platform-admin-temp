@@ -120,7 +120,7 @@ export default function TenantDetail() {
     }
   }, [serverDetailData]);
 
-  const isDemoMode = !serverDetailData;
+  const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true';
 
   // Mutations
   const updateMutation = useMutation({

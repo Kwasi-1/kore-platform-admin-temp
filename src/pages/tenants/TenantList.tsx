@@ -77,7 +77,7 @@ export default function TenantList() {
 
   const [localMockTenants, setLocalMockTenants] = React.useState<Tenant[]>(fallbackTenantsList);
 
-  const isDemoMode = !serverData;
+  const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true';
 
   // Locally apply filter/search for Demo Mode
   const filteredMockTenants = localMockTenants.filter((t) => {
