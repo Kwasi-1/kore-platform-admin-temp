@@ -4,12 +4,13 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { usePlatformAuthStore } from '@/store/platformAuthStore';
 import { platformLogin } from '@/api/auth';
-import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function Login() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const login = usePlatformAuthStore((state) => state.login);
 
@@ -54,7 +55,7 @@ export default function Login() {
             type="email"
             placeholder="admin@headlesspos.com"
             {...formik.getFieldProps('email')}
-            className={`block w-full pl-10 pr-3 py-3 border rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all text-sm ${
+            className={`block w-full pl-10 pr-3 py-3 border rounded-lg bg-zinc-800 text-white outline-none focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary/60 transition-all text-sm ${
               formik.touched.email && formik.errors.email ? 'border-red-500/50' : 'border-zinc-700/60'
             }`}
           />
@@ -77,13 +78,24 @@ export default function Login() {
           </div>
           <input
             id="password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="••••••••"
             {...formik.getFieldProps('password')}
-            className={`block w-full pl-10 pr-3 py-3 border rounded-xl bg-zinc-800 text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all text-sm ${
+            className={`block w-full pl-10 pr-10 py-3 border rounded-lg bg-zinc-800 text-white outline-none focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary/60 transition-all text-sm ${
               formik.touched.password && formik.errors.password ? 'border-red-500/50' : 'border-zinc-700/60'
             }`}
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-200 transition-colors"
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
         </div>
         {formik.touched.password && formik.errors.password ? (
           <div className="text-xs text-red-400 mt-1 flex items-center gap-1">
@@ -94,7 +106,7 @@ export default function Login() {
       </div>
 
       {errorMsg && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{errorMsg}</span>
         </div>
