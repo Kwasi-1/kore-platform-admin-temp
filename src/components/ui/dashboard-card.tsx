@@ -47,12 +47,12 @@ export function DashboardCard({
 
       <div className="flex flex-col gap-2">
         <div className="flex">
-          <p className="text-4xl font-semibold text-foreground">
+          <p className="text-4xl font-semibold text-foreground tracking-[-0.01em]">
             {value}
           </p>
           {valueTrailing}
         </div>
-        {subvalue && <div className="text-sm text-muted-foreground">{subvalue}</div>}
+        {subvalue && <div className="text-[13px] text-muted-foreground/90">{subvalue}</div>}
       </div>
     </div>
   );
