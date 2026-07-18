@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import ApiKeyRevealModal from '@/components/tenants/ApiKeyRevealModal';
 import { ChevronLeft, Info, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import PageLayout from '@/components/layout/PageLayout';
 import clsx from 'clsx';
 
 const DEFAULT_TENANT_PASSWORD = 'Welcome@123';
@@ -98,7 +99,7 @@ export default function CreateTenant() {
   ) => {
     try {
       // In offline / demo preview (or if server is offline), simulate creation
-      if (mutation.isError || isDemoMode) {
+      if (isDemoMode) {
         await new Promise((resolve) => setTimeout(resolve, 800));
         
         // Generate mock API key
@@ -145,20 +146,27 @@ export default function CreateTenant() {
   ];
 
   return (
+    <PageLayout
+      title={"Add New Tenant"}
+      showBackButton={true}
+      backUrl="/tenants"
+      className="max-w-2xl mx-auto"
+      subtitle="Provision a new business storefront onto the platform."
+    >
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Back Button */}
-      <button
+      {/* <button
         onClick={() => navigate('/tenants')}
         className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-semibold transition-colors mt-2"
       >
         <ChevronLeft className="h-4 w-4" /> Back to Tenants
-      </button>
+      </button> */}
 
       {/* Header */}
-      <div>
+      {/* <div>
         <h2 className="text-2xl font-bold font-header tracking-tight text-foreground">Add New Tenant</h2>
         <p className="text-sm text-muted-foreground mt-0.5">Provision a new business storefront onto the platform.</p>
-      </div>
+      </div> */}
 
       {/* Form Container */}
       <div className="bg-card border border-border rounded-xl p-6">
@@ -374,5 +382,6 @@ export default function CreateTenant() {
         />
       )}
     </div>
+    </PageLayout>
   );
 }

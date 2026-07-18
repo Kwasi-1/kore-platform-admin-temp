@@ -79,7 +79,7 @@ const { adminUser, logout } = usePlatformAuthStore();
           {/* Row 1: Title & Back Button on left, Profile & Notifications Pill on right */}
           <div className="flex items-center justify-between w-full min-h-[44px] gap-3">
             {/* Left side */}
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
               {showBackButton && (
                 <Button
                   variant="ghost"
@@ -107,7 +107,7 @@ const { adminUser, logout } = usePlatformAuthStore();
             </div>
 
             {/* Right side: Actions (Desktop) + Profile Pill */}
-            <div className="flex items-center gap-3 shrink-0">
+            <div className={`items-center gap-3 shrink-0 self-start ${showBackButton ? "hidden" : "flex"}`}>
               {/* Inline filter slot (Desktop only) */}
               {filterSlot && <div className="hidden md:block shrink-0">{filterSlot}</div>}
 
