@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ApiKeyRevealModal from '@/components/tenants/ApiKeyRevealModal';
-import { ChevronLeft, Info, HelpCircle, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import PageLayout from '@/components/layout/PageLayout';
 import clsx from 'clsx';
@@ -37,7 +37,7 @@ export default function CreateTenant() {
   // Form values
   const initialValues = {
     business_name: '',
-    plan: 'pos_only' as 'pos_only' | 'ecommerce_only' | 'full_suite',
+    plan: 'starter' as 'starter' | 'standard' | 'business' | 'ecom_only',
     owner_first_name: '',
     owner_last_name: '',
     owner_email: '',
@@ -45,13 +45,14 @@ export default function CreateTenant() {
     owner_password: DEFAULT_TENANT_PASSWORD,
   };
 
+
   // Validation Schema with Ghana phone format check
   const validationSchema = Yup.object().shape({
     business_name: Yup.string()
       .min(2, 'Business name must be at least 2 characters')
       .required('Business name is required'),
     plan: Yup.string()
-      .oneOf(['pos_only', 'ecommerce_only', 'full_suite'])
+      .oneOf(['starter', 'standard', 'business', 'ecom_only'])
       .required('Plan is required'),
     owner_first_name: Yup.string()
       .min(2, 'First name must be at least 2 characters')
@@ -140,10 +141,36 @@ export default function CreateTenant() {
   };
 
   const planOptions = [
-    { value: 'pos_only', label: 'POS Only', desc: 'Core register point-of-sale functionality, shift management, and cash drawer reconciliation.' },
-    { value: 'ecommerce_only', label: 'Ecommerce Only', desc: 'Online digital storefront, shopping cart, customer accounts, and Paystack GHS checkout integration.' },
-    { value: 'full_suite', label: 'Full Suite', desc: 'Unified retail: both offline cash registers (POS) and online storefront channels synchronized.' },
+    {
+      value: 'starter',
+      label: 'Starter',
+      price: 'Free trial',
+      desc: '1 user · Basic POS, shift management, cash drawer reconciliation. Ideal for solo operators.',
+      color: 'blue',
+    },
+    {
+      value: 'standard',
+      label: 'Standard',
+      price: 'Core plan',
+      desc: '3 users · Full POS, inventory management, staff roles, expenses, credit sales, and reports.',
+      color: 'yellow',
+    },
+    {
+      value: 'business',
+      label: 'Business',
+      price: 'Full power',
+      desc: 'Unlimited users · Everything in Standard plus ecommerce storefront, wholesale pricing, and payroll.',
+      color: 'green',
+    },
+    {
+      value: 'ecom_only',
+      label: 'Ecom Only',
+      price: 'Online-first',
+      desc: 'Online digital storefront with shopping cart, customer accounts, and Paystack GHS checkout. No physical POS.',
+      color: 'purple',
+    },
   ];
+
 
   return (
     <PageLayout
@@ -203,32 +230,40 @@ export default function CreateTenant() {
                 </div>
 
                 {/* Plan Selection */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label>Subscription Plan</Label>
-                  <div className="grid grid-cols-3 bg-secondary p-1 rounded-xl w-full border border-border">
-                    {planOptions.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setFieldValue('plan', opt.value)}
-                        className={clsx(
-                          "py-2 rounded-lg text-xs font-semibold transition-all duration-200",
-                          values.plan === opt.value 
-                            ? "bg-card text-foreground shadow-sm ring-1 ring-border/50" 
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  {/* Selected Plan Description */}
-                  <div className="flex gap-2 text-xs text-muted-foreground bg-muted/40 p-3 rounded-lg border border-border/50">
-                    <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
-                    <p className="italic">
-                      {planOptions.find((o) => o.value === values.plan)?.desc}
-                    </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {planOptions.map((opt) => {
+                      const colorMap: Record<string, { border: string; bg: string; text: string; badge: string }> = {
+                        blue:   { border: 'border-blue-400',   bg: 'bg-blue-50 dark:bg-blue-900/20',   text: 'text-blue-700 dark:text-blue-300',   badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+                        yellow: { border: 'border-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-300', badge: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
+                        green:  { border: 'border-green-400',  bg: 'bg-green-50 dark:bg-green-900/20',  text: 'text-green-700 dark:text-green-300',  badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
+                        purple: { border: 'border-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-300', badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
+                      };
+                      const c = colorMap[opt.color];
+                      const isSelected = values.plan === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setFieldValue('plan', opt.value)}
+                          className={clsx(
+                            'relative flex flex-col gap-1.5 rounded-xl p-4 border-2 text-left transition-all',
+                            isSelected ? `${c.border} ${c.bg}` : 'border-border bg-card hover:border-muted-foreground/30'
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className={clsx('text-sm font-bold', isSelected ? c.text : 'text-foreground')}>
+                              {opt.label}
+                            </span>
+                            <span className={clsx('text-[10px] font-semibold px-1.5 py-0.5 rounded', isSelected ? c.badge : 'bg-muted text-muted-foreground')}>
+                              {opt.price}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">{opt.desc}</p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

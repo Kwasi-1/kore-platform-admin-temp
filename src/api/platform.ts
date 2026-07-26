@@ -1,7 +1,7 @@
 import apiClient from './client';
 
 export interface PlanDistributionItem {
-  plan: 'pos_only' | 'ecommerce_only' | 'full_suite';
+  plan: 'starter' | 'standard' | 'business' | 'ecom_only';
   count: number;
   percentage: number;
 }
@@ -22,7 +22,7 @@ export interface RevenueDataPoint {
 export interface Tenant {
   id: string;
   business_name: string;
-  plan: 'pos_only' | 'ecommerce_only' | 'full_suite';
+  plan: 'starter' | 'standard' | 'business' | 'ecom_only';
   is_active: boolean;
   date_created: string;
   slug?: string;
@@ -90,7 +90,7 @@ export const updateTenant = async (id: string, updates: Partial<Tenant>) => {
 
 export interface CreateTenantPayload {
   business_name: string;
-  plan: 'pos_only' | 'ecommerce_only' | 'full_suite';
+  plan: 'starter' | 'standard' | 'business' | 'ecom_only';
   owner_first_name: string;
   owner_last_name: string;
   owner_email: string;
@@ -194,7 +194,7 @@ export interface PlatformRevenueDetails {
   tenant_breakdown: {
     tenant_id: string;
     tenant_name: string;
-    plan: 'pos_only' | 'ecommerce_only' | 'full_suite';
+    plan: 'starter' | 'standard' | 'business' | 'ecom_only';
     total_revenue: number;
     transaction_count: number;
     avg_transaction_value: number;

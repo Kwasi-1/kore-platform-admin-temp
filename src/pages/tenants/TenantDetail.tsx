@@ -33,6 +33,9 @@ import {
 import { toast } from 'react-hot-toast';
 import clsx from 'clsx';
 
+// Ordered from lowest to highest tier for upgrade/downgrade detection
+const PLAN_ORDER = ['starter', 'standard', 'business', 'ecom_only'];
+
 export default function TenantDetail() {
   const { id } = useParams<{ id: string }>();
   const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true';
@@ -66,7 +69,7 @@ export default function TenantDetail() {
     tenant: {
       id: id || 'tn-01',
       business_name: "Kofi's Provisions",
-      plan: 'full_suite',
+      plan: 'standard',
       is_active: true,
       date_created: '2026-06-01',
       api_key_prefix: 'ab12',
@@ -179,16 +182,22 @@ export default function TenantDetail() {
   };
 
   const getPlanName = (plan: string) => {
-    if (plan === 'full_suite') return 'Full Suite';
-    if (plan === 'ecommerce_only') return 'Ecommerce Only';
-    return 'POS Only';
+    const names: Record<string, string> = {
+      starter:  'Starter',
+      standard: 'Standard',
+      business: 'Business',
+      ecom_only: 'Ecom Only',
+    };
+    return names[plan] || plan;
   };
 
-  const getPlanBadgeVariant = (plan: string) => {
-    if (plan === 'full_suite') return 'outline-primary';
-    if (plan === 'ecommerce_only') return 'info';
-    return 'secondary';
+  const getPlanBadgeVariant = (plan: string): any => {
+    if (plan === 'business') return 'success';
+    if (plan === 'ecom_only') return 'info';
+    if (plan === 'standard') return 'outline-primary';
+    return 'secondary'; // starter
   };
+
 
   if (isLoading || !serverDetailData) {
     return (
@@ -277,25 +286,74 @@ export default function TenantDetail() {
 
       {/* Inline Plan Editor Overlay */}
       {isEditingPlan && (
-        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-300">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select New Plan:</span>
-            <select
-              value={selectedPlan}
-              onChange={(e) => setSelectedPlan(e.target.value)}
-              className="h-9 px-3 rounded-lg border border-input bg-card text-foreground text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary w-48 appearance-none cursor-pointer"
-            >
-              <option value="pos_only">POS Only</option>
-              <option value="ecommerce_only">Ecommerce Only</option>
-              <option value="full_suite">Full Suite</option>
-            </select>
+        <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 space-y-4 transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Change Subscription Plan</span>
+            <button onClick={() => setIsEditingPlan(false)} className="p-1 rounded-lg hover:bg-muted transition-colors">
+              <X className="h-4 w-4 text-muted-foreground" />
+            </button>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+
+          {/* Plan Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {([
+              { value: 'starter',  label: 'Starter',   desc: '1 user · Basic POS',            color: 'blue' },
+              { value: 'standard', label: 'Standard',  desc: '3 users · Full POS + inventory', color: 'yellow' },
+              { value: 'business', label: 'Business',  desc: 'Unlimited · Everything + ecom',  color: 'green' },
+              { value: 'ecom_only', label: 'Ecom Only', desc: 'Online storefront only',         color: 'purple' },
+            ] as const).map((opt) => {
+              const isCurrent = tenant.plan === opt.value;
+              const isSelected = selectedPlan === opt.value;
+              const colorMap: Record<string, string> = {
+                blue:   'border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300',
+                yellow: 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300',
+                green:  'border-green-400 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
+                purple: 'border-purple-400 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300',
+              };
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setSelectedPlan(opt.value)}
+                  className={clsx(
+                    'relative flex flex-col gap-1 rounded-xl p-3 border-2 text-left transition-all',
+                    isSelected
+                      ? colorMap[opt.color]
+                      : 'border-border bg-card hover:border-muted-foreground/30',
+                  )}
+                >
+                  {isCurrent && (
+                    <span className="absolute top-2 right-2 text-[9px] font-black uppercase tracking-wider bg-foreground text-background px-1.5 py-0.5 rounded">
+                      Current
+                    </span>
+                  )}
+                  <span className="text-sm font-bold text-foreground">{opt.label}</span>
+                  <span className="text-[11px] text-muted-foreground leading-tight">{opt.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center justify-end gap-2 pt-1">
             <Button variant="ghost" size="sm" onClick={() => setIsEditingPlan(false)} className="h-8">
-              <X className="h-4 w-4" /> Cancel
+              Cancel
             </Button>
-            <Button size="sm" onClick={handleEditPlan} className="bg-primary text-primary-foreground h-8 flex items-center gap-1">
-              <Check className="h-4 w-4" /> Save Plan
+            <Button
+              size="sm"
+              onClick={handleEditPlan}
+              disabled={selectedPlan === tenant.plan || updateMutation.isPending}
+              className={clsx(
+                'h-8 flex items-center gap-1 font-semibold',
+                selectedPlan && PLAN_ORDER.indexOf(selectedPlan) > PLAN_ORDER.indexOf(tenant.plan)
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-primary text-primary-foreground'
+              )}
+            >
+              <Check className="h-4 w-4" />
+              {selectedPlan && PLAN_ORDER.indexOf(selectedPlan) > PLAN_ORDER.indexOf(tenant.plan)
+                ? 'Upgrade Plan'
+                : 'Downgrade Plan'}
             </Button>
           </div>
         </div>

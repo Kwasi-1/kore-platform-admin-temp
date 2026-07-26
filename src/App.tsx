@@ -5,6 +5,8 @@ import { ProtectedRoute } from '@/components/shared/ProtectedRoute';
 // Layouts (not lazy — tiny files, always needed)
 import AuthLayout from '@/layouts/AuthLayout';
 import PlatformLayout from '@/layouts/PlatformLayout';
+import CreateTenant from '@/pages/tenants/CreateTenant';
+import TenantDetail from '@/pages/tenants/TenantDetail';
 
 // Pages — lazy for code splitting
 const Login = lazy(() => import('@/pages/auth/Login'));
@@ -12,8 +14,6 @@ const Overview = lazy(() => import('@/pages/dashboard/Overview'));
 
 // Tenants
 const TenantList = lazy(() => import('@/pages/tenants/TenantList'));
-const CreateTenant = lazy(() => import('@/pages/tenants/CreateTenant'));
-const TenantDetail = lazy(() => import('@/pages/tenants/TenantDetail'));
 
 // Analytics
 const Revenue = lazy(() => import('@/pages/analytics/Revenue'));

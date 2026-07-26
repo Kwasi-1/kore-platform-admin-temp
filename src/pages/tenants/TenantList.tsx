@@ -79,10 +79,12 @@ export default function TenantList() {
   // Plan filtering tab options
   const plans = [
     { label: 'All', value: 'all' },
-    { label: 'POS Only', value: 'pos_only' },
-    { label: 'Ecommerce Only', value: 'ecommerce_only' },
-    { label: 'Full Suite', value: 'full_suite' },
+    { label: 'Starter', value: 'starter' },
+    { label: 'Standard', value: 'standard' },
+    { label: 'Business', value: 'business' },
+    { label: 'Ecom Only', value: 'ecom_only' },
   ];
+
 
   // Column definitions for the DataTable
   const columns: ColumnDef<Tenant>[] = [
@@ -103,16 +105,16 @@ export default function TenantList() {
       header: 'Plan',
       cell: ({ row }) => {
         const plan = row.getValue('plan') as string;
-        if (plan === 'full_suite') return <Badge variant="success">Full Suite</Badge>;
-        if (plan === 'ecommerce_only') {
-          return (
-            <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-transparent hover:bg-purple-200 dark:hover:bg-purple-800/40">
-              Ecommerce Only
-            </Badge>
-          );
-        }
-        return <Badge variant="info">POS Only</Badge>;
+        const planConfig: Record<string, { label: string; className: string }> = {
+          starter:  { label: 'Starter',  className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-transparent' },
+          standard: { label: 'Standard', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border-transparent' },
+          business: { label: 'Business', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-transparent' },
+          ecom_only: { label: 'Ecom Only', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-transparent' },
+        };
+        const cfg = planConfig[plan] || { label: plan, className: 'bg-muted text-muted-foreground border-transparent' };
+        return <Badge className={cfg.className}>{cfg.label}</Badge>;
       },
+
     },
     {
       accessorKey: 'is_active',
