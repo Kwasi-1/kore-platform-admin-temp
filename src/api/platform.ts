@@ -90,7 +90,7 @@ export const updateTenant = async (id: string, updates: Partial<Tenant>) => {
 
 export interface CreateTenantPayload {
   business_name: string;
-  plan: 'starter' | 'standard' | 'business' | 'ecom_only';
+  plan: 'starter' | 'standard' | 'business' | 'ecom_only' | string;
   owner_first_name: string;
   owner_last_name: string;
   owner_email: string;
