@@ -311,6 +311,65 @@ export const getSystemHealth = async () => {
   return data;
 };
 
+export interface StorefrontItem {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  tenant_slug: string;
+  tenant_plan: string;
+  template_id: 'retail' | 'grocery' | 'food' | 'minimal' | string;
+  subdomain: string;
+  custom_domain?: string | null;
+  storefront_url: string;
+  status: 'active' | 'maintenance' | 'unpublished' | string;
+  orders_count: number;
+  online_gmv: number;
+  deployed_at: string;
+}
+
+export interface EligibleTenant {
+  tenant_id: string;
+  business_name: string;
+  slug: string;
+  plan: string;
+  has_storefront: boolean;
+  is_recommended: boolean;
+}
+
+export interface PlatformStorefrontsResponse {
+  summary: {
+    total_storefronts: number;
+    active_stores: number;
+    custom_domains_count: number;
+    total_web_gmv: number;
+  };
+  storefronts: StorefrontItem[];
+  eligible_tenants: EligibleTenant[];
+}
+
+export interface ProvisionStorefrontPayload {
+  tenant_id: string;
+  template_id: string;
+  subdomain_slug?: string;
+  custom_domain?: string;
+}
+
+export const getPlatformStorefronts = async (params?: { search?: string; status?: string; plan?: string }) => {
+  const { data } = await apiClient.get<any>('/api/v1/platform/storefronts', { params });
+  return (data?.success?.data || data) as PlatformStorefrontsResponse;
+};
+
+export const provisionStorefront = async (payload: ProvisionStorefrontPayload) => {
+  const { data } = await apiClient.post<any>('/api/v1/platform/storefronts/provision', payload);
+  return data?.success?.data;
+};
+
+export const updateStorefrontStatus = async (deploymentId: string, status: 'active' | 'maintenance' | 'unpublished') => {
+  const { data } = await apiClient.put<any>(`/api/v1/platform/storefronts/${deploymentId}/status`, { status });
+  return data?.success?.data;
+};
+
+
 
 
 
