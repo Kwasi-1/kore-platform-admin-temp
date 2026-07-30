@@ -14,21 +14,27 @@ interface ApiKeyRevealModalProps {
   isOpen: boolean;
   apiKey: string;
   tenantName: string;
-  tenantPlan: string;
+  tenantPlan?: string;
   ownerEmail?: string;
   ownerPassword?: string;
-  onDone: () => void;
+  onDone?: () => void;
+  onClose?: () => void;
 }
 
 export default function ApiKeyRevealModal({
   isOpen,
   apiKey,
   tenantName,
-  tenantPlan,
+  tenantPlan = 'full_suite',
   ownerEmail,
   ownerPassword,
   onDone,
+  onClose,
 }: ApiKeyRevealModalProps) {
+  const handleClose = () => {
+    if (onDone) onDone();
+    if (onClose) onClose();
+  };
   const [copied, setCopied] = React.useState(false);
   const [checkboxChecked, setCheckboxChecked] = React.useState(false);
 
@@ -147,7 +153,7 @@ export default function ApiKeyRevealModal({
         {/* Footer Actions */}
         <div className="bg-muted/30 border-t border-border px-6 py-4 flex justify-end">
           <Button
-            onClick={onDone}
+            onClick={handleClose}
             disabled={!checkboxChecked}
             className="w-full bg-primary text-primary-foreground hover:bg-primary/95 disabled:opacity-50 font-bold"
           >

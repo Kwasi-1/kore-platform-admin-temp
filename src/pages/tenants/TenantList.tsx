@@ -1,9 +1,8 @@
-import React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
   getPlatformTenantsPaginated, 
-  updateTenant, 
   Tenant 
 } from '@/api/platform';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -13,34 +12,60 @@ import { Badge } from '@/components/ui/badge';
 import { getPlanConfig } from '@/config/plans';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { ColumnDef } from '@tanstack/react-table';
 import { 
   Search, 
   Plus, 
-  Filter, 
   ExternalLink,
-  ChevronDown 
+  ChevronDown,
+  MoreHorizontal,
+  Edit3,
+  ShieldAlert,
+  RefreshCw,
+  X,
+  Eye
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { 
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
+import EditPlanModal from '@/components/tenants/EditPlanModal';
+import TenantStatusModal from '@/components/tenants/TenantStatusModal';
 import clsx from 'clsx';
 import PageLayout from '@/components/layout/PageLayout';
 
 export default function TenantList() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { formatGHS } = useCurrency();
 
   // Filters & Pagination State
-  const [planFilter, setPlanFilter] = React.useState<string>('all');
-  const [statusFilter, setStatusFilter] = React.useState<string>('all');
-  const [searchQuery, setSearchQuery] = React.useState<string>('');
-  const [pageIndex, setPageIndex] = React.useState<number>(0);
+  const [planFilter, setPlanFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchInput, setSearchInput] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [pageIndex, setPageIndex] = useState<number>(0);
   const pageSize = 10;
-  const isDemoMode = import.meta.env.VITE_USE_MOCK_API === 'true';
+
+  // Selected Tenant for Modals
+  const [editPlanTenant, setEditPlanTenant] = useState<Tenant | null>(null);
+  const [statusTenant, setStatusTenant] = useState<Tenant | null>(null);
+
+  // 300ms Search Debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setPageIndex(0);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // React Query fetch
   const { data: serverData, isLoading } = useQuery({
-    queryKey: ['platform-tenants', planFilter, statusFilter, searchQuery, pageIndex],
+    queryKey: ['platform_tenants', planFilter, statusFilter, searchQuery, pageIndex],
     queryFn: () => getPlatformTenantsPaginated({
       page: pageIndex + 1,
       limit: pageSize,
@@ -51,32 +76,9 @@ export default function TenantList() {
     retry: false,
   });
 
-  // Mutator for tenant status updates
-  const toggleMutation = useMutation({
-    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) => 
-      updateTenant(id, { is_active }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['platform-tenants'] });
-    },
-  });
-
   // Active data resolution
   const displayTenants = serverData?.tenants || [];
   const pageCount = serverData?.page_count || 1;
-
-  // Toggle activation status
-  const handleToggleStatus = (tenant: Tenant) => {
-    const newStatus = !tenant.is_active;
-
-    toggleMutation.mutate({ id: tenant.id, is_active: newStatus }, {
-      onSuccess: () => {
-        toast.success(`Tenant '${tenant.business_name}' status updated to ${newStatus ? 'Active' : 'Suspended'}.`);
-      },
-      onError: () => {
-        toast.error('Failed to update tenant status.');
-      }
-    });
-  };
 
   // Plan filtering tab options
   const plans = [
@@ -86,7 +88,6 @@ export default function TenantList() {
     { label: 'Business', value: 'business' },
     { label: 'Ecom Only', value: 'ecom_only' },
   ];
-
 
   // Column definitions for the DataTable
   const columns: ColumnDef<Tenant>[] = [
@@ -110,7 +111,6 @@ export default function TenantList() {
         const cfg = getPlanConfig(plan);
         return <Badge className={cfg.badgeClassName}>{cfg.label}</Badge>;
       },
-
     },
     {
       accessorKey: 'is_active',
@@ -166,28 +166,55 @@ export default function TenantList() {
       cell: ({ row }) => {
         const tenant = row.original;
         return (
-          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/tenants/${tenant.id}`)}
-              className="h-8 flex items-center gap-1"
-            >
-              View <ExternalLink className="h-3 w-3" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleToggleStatus(tenant)}
-              className={clsx(
-                "h-8 font-medium min-w-[90px]",
-                tenant.is_active 
-                  ? "text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20" 
-                  : "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
-              )}
-            >
-              {tenant.is_active ? 'Suspend' : 'Activate'}
-            </Button>
+          <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-lg hover:bg-muted/80 data-[state=open]:bg-muted"
+                >
+                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem
+                  onClick={() => navigate(`/tenants/${tenant.id}`)}
+                  className="cursor-pointer text-xs"
+                >
+                  <Eye className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                  View Details
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setEditPlanTenant(tenant)}
+                  className="cursor-pointer text-xs"
+                >
+                  <Edit3 className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                  Edit Plan
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setStatusTenant(tenant)}
+                  className={clsx(
+                    "cursor-pointer text-xs font-medium",
+                    tenant.is_active ? "text-red-600 focus:text-red-600 focus:bg-red-500/10" : "text-green-600 focus:text-green-600 focus:bg-green-500/10"
+                  )}
+                >
+                  {tenant.is_active ? (
+                    <>
+                      <ShieldAlert className="mr-2 h-3.5 w-3.5" />
+                      Suspend Tenant
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                      Reactivate Tenant
+                    </>
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         );
       },
@@ -195,87 +222,117 @@ export default function TenantList() {
   ];
 
   return (
-    <PageLayout title="Tenants" subtitle="Manage and provision business storefront merchants." actions={ (
+    <PageLayout
+      title="Tenants"
+      subtitle="Manage and provision business storefront merchants."
+      actions={(
         <Button 
           onClick={() => navigate('/tenants/new')}
-          className="bg-primary text-primary-foreground hover:bg-primary/95 flex items-center gap-1"
+          className="bg-primary text-primary-foreground hover:bg-primary/95 flex items-center gap-1.5 shadow-sm"
         >
           <Plus className="h-4 w-4" /> Add Tenant
         </Button>
-      )} >
-    <div className="space-y-6">
+      )}
+    >
+      <div className="space-y-6">
+        {/* Filter Bar Card */}
+        <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            
+            {/* Plan Filter Tabs */}
+            <div className="flex bg-secondary p-1 rounded-xl w-full sm:w-fit overflow-x-auto scrollbar-hide">
+              {plans.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => { setPlanFilter(p.value); setPageIndex(0); }}
+                  className={clsx(
+                    "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap",
+                    planFilter === p.value 
+                      ? "bg-card text-foreground shadow-sm" 
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
 
-      {/* Filter Bar Card */}
-      <div className="bg-card border border-border rounded-xl p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          
-          {/* Plan Filter Tabs */}
-          <div className="flex bg-secondary p-1 rounded-xl w-full sm:w-fit overflow-x-auto scrollbar-hide">
-            {plans.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => { setPlanFilter(p.value); setPageIndex(0); }}
-                className={clsx(
-                  "px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap",
-                  planFilter === p.value 
-                    ? "bg-card text-foreground shadow-sm" 
-                    : "text-muted-foreground hover:text-foreground"
+            {/* Search & Status Filters */}
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              {/* Minimalistic Debounced Search Input */}
+              <div className="relative flex-1 sm:w-64 transition-all">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70 pointer-events-none" />
+                <Input
+                  type="text"
+                  placeholder="Search business name..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="pl-9 pr-8 h-9 text-xs rounded-xl border border-input/60 bg-background/50 hover:bg-background focus:bg-background focus:border-primary/60 focus:ring-2 focus:ring-primary/10 transition-all"
+                />
+                {searchInput && (
+                  <button
+                    onClick={() => setSearchInput('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                 )}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+              </div>
 
-          {/* Search & Status Filters */}
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            {/* Search Input */}
-            <div className="relative flex-1 sm:max-w-xs">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search by business name..."
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setPageIndex(0); }}
-                className="pl-10 h-10 rounded-xl"
-              />
+              {/* Status Select */}
+              <div className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => { setStatusFilter(e.target.value); setPageIndex(0); }}
+                  className="h-9 px-3 pr-8 rounded-xl border border-input/60 bg-card text-foreground text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary/60 w-32 appearance-none cursor-pointer"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              </div>
+
             </div>
-
-            {/* Status Dropdown */}
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setPageIndex(0); }}
-                className="h-10 px-3 pr-8 rounded-xl border border-input bg-card text-foreground text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary w-36 appearance-none cursor-pointer"
-              >
-                <option value="all">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            </div>
-
           </div>
+        </div>
+
+        {/* Tenants Table Section */}
+        <div className="bg-card border border-border rounded-xl p-4 relative min-h-[320px]">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <Spinner className="py-2" />
+              <p className="text-xs text-muted-foreground font-medium">Loading merchants list...</p>
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={displayTenants}
+              enablePagination={true}
+              enableColumnVisibility={false}
+              manualPagination={true}
+              pageIndex={pageIndex}
+              pageSize={pageSize}
+              pageCount={pageCount}
+              onPageIndexChange={setPageIndex}
+              onRowClick={(row) => navigate(`/tenants/${row.id}`)}
+            />
+          )}
         </div>
       </div>
 
-      {/* Tenants Table */}
-      <div className="bg-card border border-border rounded-xl p-4">
-        <DataTable
-          columns={columns}
-          data={displayTenants}
-          enablePagination={true}
-          enableColumnVisibility={false}
-          manualPagination={true}
-          pageIndex={pageIndex}
-          pageSize={pageSize}
-          pageCount={pageCount}
-          onPageIndexChange={setPageIndex}
-          onRowClick={(row) => navigate(`/tenants/${row.id}`)}
-          loading={isLoading}
-        />
-      </div>
-    </div>
+      {/* Action Modals */}
+      <EditPlanModal
+        isOpen={Boolean(editPlanTenant)}
+        onClose={() => setEditPlanTenant(null)}
+        tenant={editPlanTenant}
+      />
+
+      <TenantStatusModal
+        isOpen={Boolean(statusTenant)}
+        onClose={() => setStatusTenant(null)}
+        tenant={statusTenant}
+      />
     </PageLayout>
   );
 }

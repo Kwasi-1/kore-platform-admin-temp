@@ -1,7 +1,7 @@
 import apiClient from './client';
 
 export interface PlanDistributionItem {
-  plan: 'starter' | 'standard' | 'business' | 'ecom_only';
+  plan: string;
   count: number;
   percentage: number;
 }
@@ -22,7 +22,7 @@ export interface RevenueDataPoint {
 export interface Tenant {
   id: string;
   business_name: string;
-  plan: 'starter' | 'standard' | 'business' | 'ecom_only';
+  plan: string;
   is_active: boolean;
   date_created: string;
   slug?: string;
@@ -194,7 +194,7 @@ export interface PlatformRevenueDetails {
   tenant_breakdown: {
     tenant_id: string;
     tenant_name: string;
-    plan: 'starter' | 'standard' | 'business' | 'ecom_only';
+    plan: string;
     total_revenue: number;
     transaction_count: number;
     avg_transaction_value: number;
