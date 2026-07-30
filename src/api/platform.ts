@@ -180,6 +180,8 @@ export interface PlatformRevenueDetails {
     fees: number;
   }[];
   summary: {
+    platform_mrr: number;
+    merchant_gmv: number;
     total_revenue: number;
     platform_fees: number;
     avg_daily_revenue: number;
@@ -187,9 +189,10 @@ export interface PlatformRevenueDetails {
     top_tenant_revenue: number;
   };
   plan_breakdown: {
-    pos_only_revenue: number;
-    ecommerce_only_revenue: number;
-    full_suite_revenue: number;
+    starter_revenue: number;
+    standard_revenue: number;
+    business_revenue: number;
+    ecom_only_revenue: number;
   };
   tenant_breakdown: {
     tenant_id: string;

@@ -72,7 +72,7 @@ const { adminUser, logout } = usePlatformAuthStore();
 
   return (
     <div
-      className={`w-full min-h-full ${constrainHeight ? "md:h-full md:overflow-hidden" : ""} bg-background text-foreground scrollbar-hide flex flex-col md:-mt-2 md:px-4 ${className}`}
+      className={`w-full min-h-full ${constrainHeight ? "md:h-full md:overflow-hidden" : ""} bg-background text-foreground scrollbar-hide flex flex-col md:-mt-2 md:px-3 ${className}`}
     >
       {title && (
         <div className="w-full mb-4 flex flex-col gap-3 md:gap-4 shrink-0">

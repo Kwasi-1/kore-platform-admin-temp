@@ -77,7 +77,7 @@ export function DashboardCard({
 
       <div className="flex flex-col gap-2 mt-2">
         <div className="flex">
-          <p className={`text-[1.3rem] md:text-2xl lg:text-[1.75rem] xl:text-3xl font-semibold text-ink textforeground ${valueStyle}`}>
+          <p className={`text-[1.3rem] md:text-2xl lg:text-[1.75rem] xl:text-3xl font-medium text-ink textforeground ${valueStyle}`}>
             {value}
           </p>
           {valueTrailing}

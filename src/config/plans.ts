@@ -18,7 +18,7 @@ export const PLANS_CONFIG: Record<string, PlanConfig> = {
     colorBar: 'bg-blue-500',
     description: '1 user, basic POS & inventory',
     allowedUsers: '1 user',
-    priceMonthly: 0,
+    priceMonthly: 199,
   },
   standard: {
     key: 'standard',
@@ -28,7 +28,7 @@ export const PLANS_CONFIG: Record<string, PlanConfig> = {
     colorBar: 'bg-amber-500',
     description: '3 users, full POS, inventory, staff & expenses',
     allowedUsers: '3 users',
-    priceMonthly: 150,
+    priceMonthly: 500,
   },
   business: {
     key: 'business',
@@ -38,7 +38,7 @@ export const PLANS_CONFIG: Record<string, PlanConfig> = {
     colorBar: 'bg-emerald-500',
     description: 'Unlimited users, full suite + ecommerce',
     allowedUsers: 'Unlimited',
-    priceMonthly: 350,
+    priceMonthly: 900,
   },
   ecom_only: {
     key: 'ecom_only',
@@ -48,7 +48,7 @@ export const PLANS_CONFIG: Record<string, PlanConfig> = {
     colorBar: 'bg-purple-500',
     description: 'Online store sellers without physical POS',
     allowedUsers: 'Unlimited',
-    priceMonthly: 200,
+    priceMonthly: 300,
   },
   // Legacy aliases fallback
   pos_only: {
@@ -59,7 +59,7 @@ export const PLANS_CONFIG: Record<string, PlanConfig> = {
     colorBar: 'bg-slate-400',
     description: 'Legacy POS tier',
     allowedUsers: '1 user',
-    priceMonthly: 0,
+    priceMonthly: 199,
   },
   ecommerce_only: {
     key: 'ecommerce_only',
@@ -69,7 +69,7 @@ export const PLANS_CONFIG: Record<string, PlanConfig> = {
     colorBar: 'bg-purple-500',
     description: 'Legacy Ecom tier',
     allowedUsers: 'Unlimited',
-    priceMonthly: 200,
+    priceMonthly: 300,
   },
   full_suite: {
     key: 'full_suite',
@@ -79,7 +79,7 @@ export const PLANS_CONFIG: Record<string, PlanConfig> = {
     colorBar: 'bg-emerald-500',
     description: 'Legacy Full Suite tier',
     allowedUsers: 'Unlimited',
-    priceMonthly: 350,
+    priceMonthly: 900,
   },
 };
 

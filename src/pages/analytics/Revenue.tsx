@@ -19,6 +19,7 @@ import { DateRangePicker, DateRangeValue } from '@/components/ui/date-range-pick
 import { BarChart } from '@/components/ui/bar-chart';
 import { DataTable } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
+import { getPlanConfig } from '@/config/plans';
 import DashboardCard from '@/components/ui/dashboard-card';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTableColumnHeader } from '@/components/ui/data-table';
@@ -33,6 +34,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import clsx from 'clsx';
+import PageLayout from '@/components/layout/PageLayout';
 
 export default function Revenue() {
   const { formatGHS } = useCurrency();
@@ -93,15 +95,8 @@ export default function Revenue() {
       ),
       cell: ({ row }) => {
         const plan = row.original.plan;
-        if (plan === 'full_suite') return <Badge variant="success">Full Suite</Badge>;
-        if (plan === 'ecommerce_only') {
-          return (
-            <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-transparent hover:bg-purple-200 dark:hover:bg-purple-800/40">
-              Ecommerce Only
-            </Badge>
-          );
-        }
-        return <Badge variant="info">POS Only</Badge>;
+        const cfg = getPlanConfig(plan);
+        return <Badge className={cfg.badgeClassName}>{cfg.label}</Badge>;
       },
     },
     {
@@ -109,7 +104,7 @@ export default function Revenue() {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Total Revenue" />
       ),
-      cell: ({ row }) => <span className="font-semibold text-foreground">{formatGHS(row.original.total_revenue)}</span>,
+      cell: ({ row }) => <span className="font-medium text-foreground">{formatGHS(row.original.total_revenue)}</span>,
     },
     {
       accessorKey: 'transaction_count',
@@ -135,27 +130,13 @@ export default function Revenue() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold font-header tracking-tight text-foreground">Revenue Analytics</h2>
-            {isDemoMode && (
-              <span className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                Demo Mode
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Monitor transaction volumes, commission earnings, and merchant performance.
-          </p>
-        </div>
-
-        {/* Date controls and grouping */}
+    <PageLayout
+      title="Revenue Analytics"
+      subtitle="Monitor platform subscription recurring revenue, merchant GMV, and store performance."
+      actions={
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Date Picker */}
-          <div className="w-full sm:w-[320px]">
+          <div className="w-full sm:w-[280px]">
             <DateRangePicker
               value={dateRange}
               onChange={(val) => val && setDateRange(val)}
@@ -185,118 +166,122 @@ export default function Revenue() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* 1. Stat Cards Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <DashboardCard
-          title="Total Revenue"
-          value={formatGHS(summary.total_revenue)}
-          subvalue="Sum of cash + mobile money + card checkouts"
-          action={<TrendingUp className="h-5 w-5 text-primary" />}
-        />
-        <DashboardCard
-          title="Platform Fees (GHS)"
-          value={formatGHS(summary.platform_fees)}
-          subvalue="Accrued from 1.5% network fee split"
-          action={<Percent className="h-5 w-5 text-amber-500" />}
-        />
-        <DashboardCard
-          title="Avg Daily Revenue"
-          value={formatGHS(summary.avg_daily_revenue)}
-          subvalue="Adjusted to date range duration"
-          action={<Calendar className="h-5 w-5 text-blue-500" />}
-        />
-        <DashboardCard
-          title="Top Tenant"
-          value={summary.top_tenant_name}
-          subvalue={`Generated ${formatGHS(summary.top_tenant_revenue)}`}
-          action={<Award className="h-5 w-5 text-emerald-500" />}
-        />
-      </div>
-
-      {/* 2. Main Chart */}
-      <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
-        <div>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
-            Revenue Trend Overview
-          </h3>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            Visual distribution of platform volumes and commission cuts.
-          </p>
-        </div>
-
-        <div className="pt-2">
-          {isLoading ? (
-            <div className="h-[320px] flex items-center justify-center">
-              <div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" />
-            </div>
-          ) : (
-            <BarChart
-              data={chart_data}
-              xKey="date"
-              height={320}
-              series={[
-                { dataKey: 'revenue', name: 'Total Revenue (GHS)', color: '#0F766E' },
-                { dataKey: 'fees', name: 'Platform Commission (GHS)', color: '#F59E0B' },
-              ]}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* 3. Plan Breakdown Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <DashboardCard
-          title="POS Only Revenue"
-          value={formatGHS(plan_breakdown.pos_only_revenue)}
-          subvalue="Subscription revenue from register terminals"
-          action={<Badge variant="info">POS Only</Badge>}
-          className="min-h-[140px] border-l-4 border-l-blue-500"
-        />
-        <DashboardCard
-          title="Ecommerce Only Revenue"
-          value={formatGHS(plan_breakdown.ecommerce_only_revenue)}
-          subvalue="Subscription revenue from digital shops"
-          action={
-            <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-transparent">
-              Ecommerce Only
-            </Badge>
-          }
-          className="min-h-[140px] border-l-4 border-l-purple-500"
-        />
-        <DashboardCard
-          title="Full Suite Revenue"
-          value={formatGHS(plan_breakdown.full_suite_revenue)}
-          subvalue="Subscription revenue from unified merchants"
-          action={<Badge variant="success">Full Suite</Badge>}
-          className="min-h-[140px] border-l-4 border-l-emerald-500"
-        />
-      </div>
-
-      {/* 4. Merchant Breakdown Table */}
-      <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
-        <div>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
-            Merchant Revenue performance
-          </h3>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            Detailed view of transaction counts, total volume, and average order value per tenant.
-          </p>
-        </div>
-
-        <div>
-          <DataTable
-            columns={columns}
-            data={tenant_breakdown}
-            enablePagination={true}
-            enableColumnVisibility={false}
-            enablePageSizeSelector={true}
-            pageSize={10}
-            loading={isLoading}
+      }
+    >
+      <div className="space-y-6">
+        {/* 1. Stat Cards Row */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <DashboardCard
+            title="Platform Subscription MRR"
+            value={formatGHS(summary.platform_mrr ?? 0)}
+            subvalue="Monthly recurring revenue from merchant plans"
+            action={<TrendingUp className="h-5 w-5 text-primary" />}
+          />
+          <DashboardCard
+            title="Merchant Gross Volume (GMV)"
+            value={formatGHS(summary.merchant_gmv ?? summary.total_revenue ?? 0)}
+            subvalue="Total sales processed by merchants"
+            action={<Activity className="h-5 w-5 text-emerald-500" />}
+          />
+          <DashboardCard
+            title="Avg Daily Merchant GMV"
+            value={formatGHS(summary.avg_daily_revenue ?? 0)}
+            subvalue="Adjusted to selected period duration"
+            action={<Calendar className="h-5 w-5 text-blue-500" />}
+          />
+          <DashboardCard
+            title="Top Merchant"
+            value={summary.top_tenant_name}
+            subvalue={`Generated ${formatGHS(summary.top_tenant_revenue)}`}
+            action={<Award className="h-5 w-5 text-amber-500" />}
           />
         </div>
+
+        {/* 2. Main Chart */}
+        <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
+              Merchant Transaction Trend Overview
+            </h3>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Visual distribution of platform gross merchandise volume (GMV) across stores.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            {isLoading ? (
+              <div className="h-[320px] flex items-center justify-center">
+                <div className="h-8 w-8 rounded-full border-4 border-muted border-t-primary animate-spin" />
+              </div>
+            ) : (
+              <BarChart
+                data={chart_data}
+                xKey="date"
+                height={320}
+                series={[
+                  { dataKey: 'revenue', name: 'Merchant GMV (GHS)', color: '#0F766E' },
+                ]}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* 3. Plan Breakdown Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <DashboardCard
+            title="Starter Plan (GH¢199/mo)"
+            value={formatGHS(plan_breakdown.starter_revenue ?? 0)}
+            subvalue="Single cashier basic POS tier MRR"
+            action={<Badge className={getPlanConfig('starter').badgeClassName}>Starter</Badge>}
+            className="min-h-[140px]"
+          />
+          <DashboardCard
+            title="Ecom Only Plan (GH¢300/mo)"
+            value={formatGHS(plan_breakdown.ecom_only_revenue ?? 0)}
+            subvalue="Digital store sellers tier MRR"
+            action={<Badge className={getPlanConfig('ecom_only').badgeClassName}>Ecom Only</Badge>}
+            className="min-h-[140px]"
+          />
+          <DashboardCard
+            title="Standard Plan (GH¢500/mo)"
+            value={formatGHS(plan_breakdown.standard_revenue ?? 0)}
+            subvalue="Multi-staff full POS tier MRR"
+            action={<Badge className={getPlanConfig('standard').badgeClassName}>Standard</Badge>}
+            className="min-h-[140px]"
+          />
+          <DashboardCard
+            title="Business Plan (GH¢900/mo)"
+            value={formatGHS(plan_breakdown.business_revenue ?? 0)}
+            subvalue="Full suite POS + E-commerce tier MRR"
+            action={<Badge className={getPlanConfig('business').badgeClassName}>Business</Badge>}
+            className="min-h-[140px]"
+          />
+        </div>
+
+        {/* 4. Merchant Breakdown Table */}
+        <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
+              Merchant Revenue performance
+            </h3>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Detailed view of transaction counts, total volume, and average order value per tenant.
+            </p>
+          </div>
+
+          <div>
+            <DataTable
+              columns={columns}
+              data={tenant_breakdown}
+              enablePagination={true}
+              enableColumnVisibility={false}
+              enablePageSizeSelector={true}
+              pageSize={10}
+              loading={isLoading}
+            />
+          </div>
+        </div>
       </div>
-    </div>
+    </PageLayout>
   );
 }
