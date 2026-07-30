@@ -8,6 +8,7 @@ import {
   Tenant 
 } from '@/api/platform';
 import { useCurrency } from '@/hooks/useCurrency';
+import { formatShortDate } from '@/utils/date';
 import DashboardCard from '@/components/ui/dashboard-card';
 import { LineChart } from '@/components/ui/line-chart';
 import { Badge } from '@/components/ui/badge';
@@ -280,7 +281,7 @@ export default function Overview() {
                         <td className="py-3 px-4">
                           <StatusBadge status={t.is_active ? 'success' : 'failed'} />
                         </td>
-                        <td className="py-3 px-4 text-muted-foreground">{t.date_created}</td>
+                        <td className="py-3 px-4 text-muted-foreground font-medium">{formatShortDate(t.date_created)}</td>
                         <td className="py-3 pl-4 text-right">
                           <button
                             onClick={() => navigate(`/tenants/${t.id}`)}

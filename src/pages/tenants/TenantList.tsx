@@ -7,6 +7,7 @@ import {
   Tenant 
 } from '@/api/platform';
 import { useCurrency } from '@/hooks/useCurrency';
+import { formatShortDate } from '@/utils/date';
 import { DataTable } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { getPlanConfig } from '@/config/plans';
@@ -156,7 +157,7 @@ export default function TenantList() {
       header: 'Created',
       cell: ({ row }) => {
         const dateStr = row.getValue('date_created') as string;
-        return <span className="text-muted-foreground">{dateStr}</span>;
+        return <span className="text-muted-foreground font-medium">{formatShortDate(dateStr)}</span>;
       },
     },
     {

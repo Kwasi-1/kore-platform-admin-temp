@@ -8,6 +8,8 @@ import {
   TenantDetailResponse 
 } from '@/api/platform';
 import { useCurrency } from '@/hooks/useCurrency';
+import { formatShortDate, formatDateTime } from '@/utils/date';
+import { getPlanConfig } from '@/config/plans';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -229,8 +231,8 @@ export default function TenantDetail() {
             <h2 className="text-2xl font-bold font-header tracking-tight text-foreground">
               {tenant.business_name}
             </h2>
-            <Badge variant={getPlanBadgeVariant(tenant.plan)}>
-              {getPlanName(tenant.plan)}
+            <Badge className={getPlanConfig(tenant.plan).badgeClassName}>
+              {getPlanConfig(tenant.plan).label}
             </Badge>
             <Badge variant={tenant.is_active ? 'success' : 'danger'}>
               {tenant.is_active ? 'Active' : 'Suspended'}
@@ -406,7 +408,7 @@ export default function TenantDetail() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Active Plan:</span>
-                <span className="font-semibold text-foreground">{getPlanName(tenant.plan)}</span>
+                <span className="font-semibold text-foreground">{getPlanConfig(tenant.plan).label}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">System Status:</span>
@@ -420,7 +422,7 @@ export default function TenantDetail() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Created Date:</span>
-                <span className="font-semibold text-foreground">{tenant.date_created}</span>
+                <span className="font-semibold text-foreground">{formatShortDate(tenant.date_created)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">API Prefix:</span>
@@ -527,32 +529,38 @@ export default function TenantDetail() {
               Recent Transactions
             </h3>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-border text-muted-foreground font-semibold">
-                    <th className="py-2.5 pr-2">Date</th>
-                    <th className="py-2.5 px-2">Amount</th>
-                    <th className="py-2.5 px-2">Channel</th>
-                    <th className="py-2.5 px-2">Method</th>
-                    <th className="py-2.5 pl-2 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border text-foreground">
-                  {recent_transactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-2.5 pr-2 text-muted-foreground">{tx.date}</td>
-                      <td className="py-2.5 px-2 font-semibold">{formatGHS(tx.amount)}</td>
-                      <td className="py-2.5 px-2 uppercase font-medium">{tx.channel}</td>
-                      <td className="py-2.5 px-2 capitalize">{tx.payment_method.replace('_', ' ')}</td>
-                      <td className="py-2.5 pl-2 text-right">
-                        <StatusBadge status={tx.status} className="rounded" />
-                      </td>
+            {recent_transactions.length === 0 ? (
+              <div className="py-8 text-center text-xs text-muted-foreground bg-muted/10 rounded-lg border border-dashed border-border">
+                No transactions recorded yet for this tenant.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground font-semibold">
+                      <th className="py-2.5 pr-2">Date</th>
+                      <th className="py-2.5 px-2">Amount</th>
+                      <th className="py-2.5 px-2">Channel</th>
+                      <th className="py-2.5 px-2">Method</th>
+                      <th className="py-2.5 pl-2 text-right">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border text-foreground">
+                    {recent_transactions.map((tx) => (
+                      <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="py-2.5 pr-2 text-muted-foreground font-medium">{formatShortDate(tx.date)}</td>
+                        <td className="py-2.5 px-2 font-semibold">{formatGHS(tx.amount)}</td>
+                        <td className="py-2.5 px-2 uppercase font-medium">{tx.channel}</td>
+                        <td className="py-2.5 px-2 capitalize">{tx.payment_method.replace('_', ' ')}</td>
+                        <td className="py-2.5 pl-2 text-right">
+                          <StatusBadge status={tx.status} className="rounded" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
         </div>
@@ -593,8 +601,8 @@ export default function TenantDetail() {
                   <td className="py-3 px-4">
                     <StatusBadge status={st.is_active ? 'success' : 'cancelled'} />
                   </td>
-                  <td className="py-3 pl-4 text-right text-muted-foreground">
-                    {st.last_login || 'Never logged in'}
+                  <td className="py-3 pl-4 text-right text-muted-foreground font-medium">
+                    {st.last_login ? formatDateTime(st.last_login) : 'Never logged in'}
                   </td>
                 </tr>
               ))}
