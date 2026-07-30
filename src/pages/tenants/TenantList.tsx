@@ -63,8 +63,14 @@ export default function TenantList() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setPageIndex(0);
+  };
+
   // React Query fetch
-  const { data: serverData, isLoading } = useQuery({
+  const { data: serverData, isLoading, isFetching } = useQuery({
     queryKey: ['platform_tenants', planFilter, statusFilter, searchQuery, pageIndex],
     queryFn: () => getPlatformTenantsPaginated({
       page: pageIndex + 1,
@@ -236,7 +242,7 @@ export default function TenantList() {
     >
       <div className="space-y-6">
         {/* Filter Bar Card */}
-        <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+        <div className="bg-card space-y-4">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             
             {/* Plan Filter Tabs */}
@@ -260,31 +266,35 @@ export default function TenantList() {
             {/* Search & Status Filters */}
             <div className="flex items-center gap-3 w-full sm:w-auto">
               {/* Minimalistic Debounced Search Input */}
-              <div className="relative flex-1 sm:w-64 transition-all">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70 pointer-events-none" />
-                <Input
-                  type="text"
-                  placeholder="Search business name..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="pl-9 pr-8 h-9 text-xs rounded-xl border border-input/60 bg-background/50 hover:bg-background focus:bg-background focus:border-primary/60 focus:ring-2 focus:ring-primary/10 transition-all"
-                />
-                {searchInput && (
-                  <button
-                    onClick={() => setSearchInput('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
+              <Input
+                type="text"
+                placeholder="Search business name..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                startContent={<Search className="h-3.5 w-3.5 text-muted-foreground/70" />}
+                endContent={
+                  isFetching && searchQuery ? (
+                    <Spinner className="h-3 w-3" />
+                  ) : searchInput ? (
+                    <button
+                      type="button"
+                      onClick={handleClearSearch}
+                      className="p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      title="Clear search"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  ) : null
+                }
+                className="h-9 text-xs w-full sm:w-64 rounded-full border border-input/60 focus:border-foreground bg-background/50 ring-0 transition-all"
+              />
 
               {/* Status Select */}
               <div className="relative">
                 <select
                   value={statusFilter}
                   onChange={(e) => { setStatusFilter(e.target.value); setPageIndex(0); }}
-                  className="h-9 px-3 pr-8 rounded-xl border border-input/60 bg-card text-foreground text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary/60 w-32 appearance-none cursor-pointer"
+                  className="h-9 px-3 pr-8 rounded-xl border border-input/60 bg-card text-foreground text-xs font-medium focus:outline-none w-32 appearance-none cursor-pointer"
                 >
                   <option value="all">All Statuses</option>
                   <option value="active">Active</option>
