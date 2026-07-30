@@ -213,6 +213,22 @@ export const getDetailedRevenueAnalytics = async (startDate: string, endDate: st
   return (data?.success?.data || data) as PlatformRevenueDetails;
 };
 
+export interface YearlySubscriptionMRR {
+  year: number;
+  months: {
+    month: string;
+    subscription: number;
+    month_index: number;
+  }[];
+}
+
+export const getYearlySubscriptionMRR = async (year?: number) => {
+  const { data } = await apiClient.get<any>('/api/v1/platform/analytics/revenue/subscription-yearly', {
+    params: year ? { year } : {},
+  });
+  return (data?.success?.data || data) as YearlySubscriptionMRR;
+};
+
 export interface PlatformTransactionDetails {
   summary: {
     total_transactions: number;
