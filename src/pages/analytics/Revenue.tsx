@@ -49,6 +49,7 @@ export default function Revenue() {
   });
 
   const [groupBy, setGroupBy] = React.useState<'day' | 'week' | 'month'>('day');
+  const [chartMetric, setChartMetric] = React.useState<'gmv' | 'subscription'>('gmv');
 
   // 2. Query Hook
   const startDateStr = format(dateRange.startDate, 'yyyy-MM-dd');
@@ -199,13 +200,45 @@ export default function Revenue() {
 
         {/* 2. Main Chart */}
         <div className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
-              Merchant Transaction Trend Overview
-            </h3>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Visual distribution of platform gross merchandise volume (GMV) across stores.
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
+                {chartMetric === 'gmv' ? 'Merchant Transaction GMV Trend' : 'Platform Subscription Revenue Trend'}
+              </h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {chartMetric === 'gmv'
+                  ? 'Visual distribution of total sales volume processed across all merchant stores.'
+                  : 'Visual distribution of platform recurring subscription earnings from merchant plans.'}
+              </p>
+            </div>
+
+            {/* Toggle Metric Tabs */}
+            <div className="flex bg-secondary p-1 rounded-xl border border-border h-9 text-xs shrink-0">
+              <button
+                type="button"
+                onClick={() => setChartMetric('gmv')}
+                className={clsx(
+                  "px-3 rounded-lg font-semibold transition-all duration-200",
+                  chartMetric === 'gmv'
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Merchant GMV
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartMetric('subscription')}
+                className={clsx(
+                  "px-3 rounded-lg font-semibold transition-all duration-200",
+                  chartMetric === 'subscription'
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Subscription MRR
+              </button>
+            </div>
           </div>
 
           <div className="pt-2">
@@ -218,9 +251,11 @@ export default function Revenue() {
                 data={chart_data}
                 xKey="date"
                 height={320}
-                series={[
-                  { dataKey: 'revenue', name: 'Merchant GMV (GHS)', color: '#0F766E' },
-                ]}
+                series={
+                  chartMetric === 'gmv'
+                    ? [{ dataKey: 'revenue', name: 'Merchant GMV (GHS)', color: '#0F766E' }]
+                    : [{ dataKey: 'subscription', name: 'Subscription Revenue (GHS)', color: '#2563EB' }]
+                }
               />
             )}
           </div>

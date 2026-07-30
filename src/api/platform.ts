@@ -176,7 +176,9 @@ export const rotateTenantApiKey = async (id: string) => {
 export interface PlatformRevenueDetails {
   chart_data: {
     date: string;
+    gmv?: number;
     revenue: number;
+    subscription?: number;
     fees: number;
   }[];
   summary: {
