@@ -45,7 +45,7 @@ export function BarChart<TData extends Record<string, unknown>>({
             dataKey={serie.dataKey}
             name={serie?.name}
             stackId={serie.stackId}
-            fill={serie.color ?? "#0F766E"}
+            fill={serie.color ?? "#10B981"}
           />
         ))}
       </RechartsBarChart>

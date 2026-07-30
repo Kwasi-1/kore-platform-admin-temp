@@ -242,7 +242,7 @@ export interface PlatformTransactionDetails {
     volume: number;
   }[];
   payment_method_breakdown: {
-    method: 'cash' | 'mobile_money' | 'card' | 'credit';
+    method: string;
     count: number;
     volume: number;
     percentage: number;
@@ -250,6 +250,7 @@ export interface PlatformTransactionDetails {
   top_tenants: {
     tenant_id: string;
     tenant_name: string;
+    plan?: string;
     transaction_count: number;
     total_volume: number;
     avg_transaction_value: number;
