@@ -151,7 +151,7 @@ export default function ApiKeyRevealModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="bg-muted/30 border-t border-border px-6 py-4 flex justify-end">
+        <div className=" px-6 py-4 flex justify-end">
           <Button
             onClick={handleClose}
             disabled={!checkboxChecked}

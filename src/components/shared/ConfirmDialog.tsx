@@ -90,12 +90,12 @@ export default function ConfirmDialog({
           )}
         </div>
 
-        <div className="bg-muted/30 border-t border-border px-6 py-4 flex justify-end gap-2">
+        <div className="border-t border-border px-6 py-4 flex justify-end gap-2">
           <Button
             variant="outline"
             onClick={onClose}
             disabled={isLoading}
-            className="h-10 rounded-xl"
+            className="h-10 rounded-full"
           >
             Cancel
           </Button>
@@ -103,7 +103,7 @@ export default function ConfirmDialog({
             onClick={handleConfirm}
             disabled={isLoading || (showReasonInput && !reason.trim())}
             className={clsx(
-              "h-10 rounded-xl font-bold px-4",
+              "h-10 rounded-full font-bold px-4",
               isDanger 
                 ? "bg-red-600 text-white hover:bg-red-700" 
                 : "bg-primary text-primary-foreground hover:bg-primary/95"
