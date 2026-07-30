@@ -11,6 +11,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import DashboardCard from '@/components/ui/dashboard-card';
 import { LineChart } from '@/components/ui/line-chart';
 import { Badge } from '@/components/ui/badge';
+import { getPlanConfig } from '@/config/plans';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { 
   Users, 
@@ -131,19 +132,6 @@ export default function Overview() {
 
   const activities = getActivities();
 
-  // Helper for Plan badge color variants
-  const getPlanBadgeVariant = (plan: string) => {
-    if (plan === 'full_suite') return 'outline-primary';
-    if (plan === 'ecommerce_only') return 'info';
-    return 'secondary';
-  };
-
-  const getPlanName = (plan: string) => {
-    if (plan === 'full_suite') return 'Full Suite';
-    if (plan === 'ecommerce_only') return 'Ecommerce Only';
-    return 'POS Only';
-  };
-
   const userName = adminUser?.name?.split(' ')[0] || 'Admin';
 
   return (
@@ -222,24 +210,19 @@ export default function Overview() {
               
               <div className="space-y-5">
                 {summary.plan_distribution.map((item) => {
-                  // Color indicators
-                  const colorBar = item.plan === 'full_suite' 
-                    ? 'bg-primary' 
-                    : item.plan === 'ecommerce_only' 
-                      ? 'bg-blue-500' 
-                      : 'bg-slate-400';
+                  const cfg = getPlanConfig(item.plan);
                   
                   return (
                     <div key={item.plan} className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs font-semibold">
-                        <span className="text-foreground">{getPlanName(item.plan)}</span>
+                        <span className="text-foreground">{cfg.label}</span>
                         <span className="text-muted-foreground">
                           {item.count} ({item.percentage}%)
                         </span>
                       </div>
                       <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
                         <div 
-                          className={clsx("h-full rounded-full transition-all duration-300", colorBar)} 
+                          className={clsx("h-full rounded-full transition-all duration-300", cfg.colorBar)} 
                           style={{ width: `${item.percentage}%` }}
                         />
                       </div>
@@ -290,8 +273,8 @@ export default function Overview() {
                       <tr key={t.id} className="hover:bg-muted/30 transition-colors">
                         <td className="py-3 pr-4 font-semibold">{t.business_name}</td>
                         <td className="py-3 px-4">
-                          <Badge variant={getPlanBadgeVariant(t.plan)}>
-                            {getPlanName(t.plan)}
+                          <Badge className={getPlanConfig(t.plan).badgeClassName}>
+                            {getPlanConfig(t.plan).label}
                           </Badge>
                         </td>
                         <td className="py-3 px-4">

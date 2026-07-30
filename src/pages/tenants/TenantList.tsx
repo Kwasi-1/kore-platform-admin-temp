@@ -9,6 +9,7 @@ import {
 import { useCurrency } from '@/hooks/useCurrency';
 import { DataTable } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
+import { getPlanConfig } from '@/config/plans';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ColumnDef } from '@tanstack/react-table';
@@ -105,14 +106,8 @@ export default function TenantList() {
       header: 'Plan',
       cell: ({ row }) => {
         const plan = row.getValue('plan') as string;
-        const planConfig: Record<string, { label: string; className: string }> = {
-          starter:  { label: 'Starter',  className: 'bg-blue-100/30 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-transparent' },
-          standard: { label: 'Standard', className: 'bg-yellow-100/30 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border-transparent' },
-          business: { label: 'Business', className: 'bg-green-100/30 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-transparent' },
-          ecom_only: { label: 'Ecom Only', className: 'bg-purple-100/30 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-transparent' },
-        };
-        const cfg = planConfig[plan] || { label: plan, className: 'bg-muted text-muted-foreground border-transparent' };
-        return <Badge className={cfg.className}>{cfg.label}</Badge>;
+        const cfg = getPlanConfig(plan);
+        return <Badge className={cfg.badgeClassName}>{cfg.label}</Badge>;
       },
 
     },
