@@ -210,7 +210,7 @@ export default function StorefrontList() {
             </Button>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 bg-card border border-border/70 rounded-xl p-6">
             {storefronts.map((store) => {
               const planCfg = getPlanConfig(store.tenant_plan);
               const isLive = store.status === 'active';
@@ -237,12 +237,12 @@ export default function StorefrontList() {
                     {/* Status & Custom Domain Badges */}
                     <div className="flex items-center gap-2 pt-1">
                       <span className={clsx(
-                        "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider",
+                        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
                         isLive 
-                          ? "bg-card text-foreground border-border"
-                          : "bg-muted text-muted-foreground border-border"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
                       )}>
-                        <span className={clsx("h-1.5 w-1.5 rounded-full", isLive ? "bg-foreground" : "bg-muted-foreground")} />
+                        <span className={clsx("h-1.5 w-1.5 rounded-full", isLive ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
                         {store.status}
                       </span>
 
