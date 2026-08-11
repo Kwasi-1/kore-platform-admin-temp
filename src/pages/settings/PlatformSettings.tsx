@@ -29,6 +29,7 @@ const LOCAL_STORAGE_KEY = 'hpos_platform_settings';
 const defaultSettings: PlatformSettingsData = {
   platform_fee_percentage: 2.5,
   default_tax_rate: 15.0,
+  platform_paystack_enabled: true,
   supported_payment_methods: ['cash', 'mtn_momo', 'vodafone_cash', 'card'],
 };
 
@@ -240,6 +241,36 @@ export default function PlatformSettings() {
                 </div>
               </div>
 
+              {/* SECTION 1.5: Platform Capabilities */}
+              <div className="space-y-4 pt-2">
+                <div className="border-b border-border pb-2 flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
+                    Platform Capability Switches
+                  </h3>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border/50">
+                  <div className="space-y-0.5 pr-4">
+                    <span className="text-xs font-bold text-foreground block">
+                      Allow Paystack Online Payments
+                    </span>
+                    <span className="text-[11px] text-muted-foreground block leading-tight">
+                      When turned OFF, all tenant POS registers across the platform automatically fallback to Manual Cash & MoMo mode.
+                    </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={values.platform_paystack_enabled ?? true}
+                      onChange={(e) => setFieldValue('platform_paystack_enabled', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+              </div>
+
               {/* SECTION 2: Payment Methods */}
               <div className="space-y-4 pt-2">
                 <div className="border-b border-border pb-2 flex items-center gap-2">
@@ -275,7 +306,7 @@ export default function PlatformSettings() {
                             }}
                             className="h-4 w-4 rounded border-input text-primary bg-card focus:ring-primary accent-primary cursor-pointer"
                           />
-                          <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                          <span className="text-xs font-semibold text-foreground transition-colors">
                             {method.label}
                           </span>
                         </label>

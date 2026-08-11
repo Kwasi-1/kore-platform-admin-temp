@@ -274,6 +274,7 @@ export const getDetailedTransactionAnalytics = async (startDate: string, endDate
 export interface PlatformSettingsData {
   platform_fee_percentage: number;
   default_tax_rate: number;
+  platform_paystack_enabled?: boolean;
   supported_payment_methods: ('cash' | 'mtn_momo' | 'vodafone_cash' | 'airteltigo_money' | 'card')[];
 }
 
