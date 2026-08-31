@@ -370,7 +370,75 @@ export const updateStorefrontStatus = async (deploymentId: string, status: 'acti
   return data?.success?.data;
 };
 
+export interface GeneratedStorefrontContent {
+  hero: {
+    badge: string;
+    headline: string;
+    subheadline: string;
+    cta_text: string;
+    secondary_cta_text?: string;
+  };
+  about: {
+    title: string;
+    story: string;
+    values: string[];
+  };
+  features: {
+    icon: string;
+    title: string;
+    description: string;
+  }[];
+  seo: {
+    meta_title: string;
+    meta_description: string;
+    keywords: string[];
+  };
+  starter_categories: string[];
+  theme: {
+    primary_color: string;
+    accent_color?: string;
+  };
+}
 
+export interface GenerateStorefrontPreviewPayload {
+  business_name: string;
+  industry: string;
+  tagline?: string;
+  primary_color?: string;
+  target_audience?: string;
+  about_notes?: string;
+}
 
+export interface GenerateStorefrontPayload {
+  tenant_id: string;
+  business_name: string;
+  industry: string;
+  tagline?: string;
+  template_id: string;
+  primary_color?: string;
+  subdomain?: string;
+  custom_domain?: string;
+  override_content?: GeneratedStorefrontContent;
+  target_audience?: string;
+  about_notes?: string;
+}
 
+export const previewAIStorefrontContent = async (payload: GenerateStorefrontPreviewPayload) => {
+  const { data } = await apiClient.post<any>('/api/v1/platform/generate/preview', payload);
+  return data?.success?.data as {
+    generated_content: GeneratedStorefrontContent;
+    model_used: string;
+  };
+};
 
+export const generateAndDeployStorefront = async (payload: GenerateStorefrontPayload) => {
+  const { data } = await apiClient.post<any>('/api/v1/platform/generate', payload);
+  return data?.success?.data as {
+    deployment: StorefrontItem;
+    storefront_url: string;
+    subdomain: string;
+    template_id: string;
+    generated_content: GeneratedStorefrontContent;
+    message: string;
+  };
+};

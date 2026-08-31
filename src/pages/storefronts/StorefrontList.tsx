@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   Plus
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -36,6 +37,7 @@ const unescapeName = (str: string) => {
 };
 
 export default function StorefrontList() {
+  const navigate = useNavigate();
   const { formatGHS } = useCurrency();
   const queryClient = useQueryClient();
 
@@ -74,8 +76,11 @@ export default function StorefrontList() {
   });
 
   const handleOpenProvision = (tenantId?: string) => {
-    setSelectedTenantForModal(tenantId);
-    setProvisionModalOpen(true);
+    if (tenantId) {
+      navigate(`/storefronts/generate?tenant_id=${tenantId}`);
+    } else {
+      navigate('/storefronts/generate');
+    }
   };
 
   const statusOptions = [
@@ -90,13 +95,14 @@ export default function StorefrontList() {
       title="Storefront Management"
       subtitle="Deploy, configure, and monitor digital web storefronts and custom domains for merchants."
       actions={
-        <Button
-          onClick={() => handleOpenProvision()}
-          radius='default'
-          className="font-bold text-xs h-10 px-4 flex items-center gap-2"
-        >
-          <Sparkles className="h-4 w-4" /> Provision Storefront
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => navigate('/storefronts/generate')}
+            className="font-bold text-xs h-10 px-4 flex items-center gap-2 rounded-xl"
+          >
+            <Sparkles className="h-4 w-4" /> AI Generate Storefront
+          </Button>
+        </div>
       }
     >
       <div className="space-y-6">
@@ -106,7 +112,7 @@ export default function StorefrontList() {
           <div className="bg-card border border-border/80 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-muted text-foreground flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-5 w-5" />
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
               </div>
               <div>
                 <p className="text-xs font-bold text-foreground">
@@ -119,10 +125,10 @@ export default function StorefrontList() {
             </div>
 
             <Button
-              onClick={() => handleOpenProvision(pendingRequests[0].tenant_id)}
+              onClick={() => navigate(`/storefronts/generate?tenant_id=${pendingRequests[0].tenant_id}`)}
               className="bg-foreground text-background hover:bg-foreground/90 rounded-lg text-xs font-bold px-3 h-8 shrink-0"
             >
-              Deploy for {unescapeName(pendingRequests[0].business_name)}
+              Generate for {unescapeName(pendingRequests[0].business_name)}
             </Button>
           </div>
         )}
