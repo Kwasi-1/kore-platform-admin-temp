@@ -1,6 +1,6 @@
 {
-  "name": "Kore Commerce Admin",
-  "short_name": "KoreBiz",
+  "name": "KoreBiz Admin",
+  "short_name": "KoreAdmin",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
@@ -15,7 +15,7 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#c1f377",
-  "background_color": "#ffffff",
+  "theme_color": "#0f1010",
+  "background_color": "#0f1010",
   "display": "standalone"
 }
