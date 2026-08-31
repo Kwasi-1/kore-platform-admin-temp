@@ -138,25 +138,25 @@ export default function StorefrontList() {
           <DashboardCard
             title="Total Storefronts"
             value={isLoading ? <Spinner /> : (summary?.total_storefronts ?? 0).toLocaleString()}
-            subvalue="Configured merchant web stores"
+            // subvalue="Configured merchant web stores"
             action={<Store className="h-5 w-5 text-muted-foreground" />}
           />
           <DashboardCard
             title="Active Live Stores"
             value={isLoading ? <Spinner /> : (summary?.active_stores ?? 0).toLocaleString()}
-            subvalue="Storefronts accepting online orders"
+            // subvalue="Storefronts accepting online orders"
             action={<CheckCircle className="h-5 w-5 text-muted-foreground" />}
           />
           <DashboardCard
             title="Custom Domains"
             value={isLoading ? <Spinner /> : (summary?.custom_domains_count ?? 0).toLocaleString()}
-            subvalue="Verified custom domains connected"
+            // subvalue="Verified custom domains connected"
             action={<Globe className="h-5 w-5 text-muted-foreground" />}
           />
           <DashboardCard
             title="Total Web GMV"
             value={isLoading ? <Spinner /> : formatGHS(summary?.total_web_gmv ?? 0)}
-            subvalue="Sales volume via online store checkouts"
+            // subvalue="Sales volume via online store checkouts"
             action={<Activity className="h-5 w-5 text-muted-foreground" />}
           />
         </div>
