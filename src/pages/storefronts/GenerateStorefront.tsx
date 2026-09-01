@@ -71,6 +71,7 @@ const TEMPLATES = [
   {
     id: 'linea-luxury',
     name: 'Linea Luxe',
+    baseUrl: 'https://kore-boutique.vercel.app',
     tagline: 'Boutique, Luxury & High-Fashion Showcase',
     description: 'Minimalist editorial layout with serif typography, full-bleed imagery, gold accents, and narrative brand storytelling.',
     features: [
@@ -87,6 +88,7 @@ const TEMPLATES = [
   {
     id: 'vetshore-retail',
     name: 'Vetshore Flow',
+    baseUrl: 'https://kore-retail.vercel.app',
     tagline: 'High-Volume Retail & Essentials Catalog',
     description: 'High-speed ecommerce layout with quick category filter pills, sticky promotional banners, search-first interface, and fast checkout.',
     features: [
@@ -140,11 +142,20 @@ export default function GenerateStorefront() {
     return tenants.find((t) => t.id === selectedTenantId);
   }, [tenants, selectedTenantId]);
 
+  const activeTemplate = useMemo(() => {
+    return TEMPLATES.find((t) => t.id === selectedTemplateId) || TEMPLATES[0];
+  }, [selectedTemplateId]);
+
+  const liveStorefrontUrl = useMemo(() => {
+    const slug = selectedTenant?.slug || 'my-store';
+    return `${activeTemplate.baseUrl}/?tenant=${slug}`;
+  }, [activeTemplate, selectedTenant]);
+
   // Auto-populate business name & slug when tenant is selected
   useEffect(() => {
     if (selectedTenant) {
       setBusinessName(selectedTenant.business_name || '');
-      setSubdomain(`${selectedTenant.slug}.vysiontech.shop`);
+      setSubdomain(`${selectedTenant.slug}.kore-store.app`);
     }
   }, [selectedTenant]);
 
@@ -730,7 +741,7 @@ export default function GenerateStorefront() {
                   </h4>
                   <div className="p-4 bg-white dark:bg-neutral-900 border border-border/60 rounded-xl space-y-1 shadow-2xs font-sans">
                     <p className="text-[11px] text-emerald-600 dark:text-emerald-400 truncate">
-                      https://{subdomain || `${selectedTenant?.slug || 'shop'}.vysiontech.shop`}
+                      {customDomain ? `https://${customDomain}` : liveStorefrontUrl}
                     </p>
                     <h5 className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
                       {aiContent.seo.meta_title}
@@ -987,19 +998,16 @@ export default function GenerateStorefront() {
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label className="text-xs font-bold text-foreground">
-                      Subdomain Address <span className="text-rose-500">*</span>
+                      Live Storefront Address (Vercel Multi-Tenant)
                     </Label>
-                    <div className="flex items-center">
-                      <Input
-                        value={subdomain}
-                        onChange={(e) => setSubdomain(e.target.value)}
-                        placeholder="my-store.vysiontech.shop"
-                        className="rounded-xl h-10 text-xs font-mono font-semibold"
-                      />
+                    <div className="p-3 bg-muted/40 border border-border/80 rounded-xl space-y-1">
+                      <p className="text-xs font-mono font-bold text-primary truncate">
+                        {liveStorefrontUrl}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Automatically routes to {activeTemplate.name} with {selectedTenant?.business_name || 'merchant'} inventory.
+                      </p>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Public URL where customer traffic will be routed.
-                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -1011,7 +1019,7 @@ export default function GenerateStorefront() {
                       className="rounded-xl h-10 text-xs font-mono"
                     />
                     <p className="text-[11px] text-muted-foreground">
-                      CNAME DNS record pointing to your platform cluster.
+                      Attach a custom branded domain (e.g. CNAME pointing to Vercel).
                     </p>
                   </div>
                 </div>
@@ -1026,7 +1034,7 @@ export default function GenerateStorefront() {
                     </div>
                     <div>
                       <p className="text-[11px] text-muted-foreground">Template</p>
-                      <p className="font-bold text-foreground capitalize">{selectedTemplateId.replace('-', ' ')}</p>
+                      <p className="font-bold text-foreground capitalize">{activeTemplate.name}</p>
                     </div>
                     <div>
                       <p className="text-[11px] text-muted-foreground">Industry</p>
