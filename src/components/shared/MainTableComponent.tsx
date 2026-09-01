@@ -247,7 +247,7 @@ const EnhancedTableComponent: React.FC<EnhancedTableProps> = ({
   rowActionsDisabledKeys = [],
 
   // Container
-  containerStyles = "min-h-[540px] max-h-fit",
+  containerStyles = "min-h-[500px] max-h-fit rounded-xl",
 
   // Additional
   additionalModals,
@@ -608,70 +608,72 @@ const EnhancedTableComponent: React.FC<EnhancedTableProps> = ({
           {selectionActions.length > 0 &&
             ((selectedKeys === "all" && rows.length > 0) ||
               (selectedKeys instanceof Set && selectedKeys.size > 0)) && (
-              <motion.div
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 100, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-background/95 border border-border shadow-2xl rounded-2xl px-5 py-3 flex items-center gap-4 min-w-[320px] justify-between backdrop-blur-md"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-foreground text-sm">
-                      {selectedKeys === "all" ? rows.length : selectedKeys.size}
-                    </span>
-                    <span className="text-muted-foreground text-xs font-medium">
-                      selected
-                    </span>
+              <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center pointer-events-none px-4 font-header !tracking-tight">
+                <motion.div
+                  initial={{ y: 60, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 60, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className="pointer-events-auto bg-white border border-border dark:border-gray-700 shadow-xl rounded-lg px-6 py-3 flex items-center gap-6 min-w-[300px] justify-between"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 !tracking-tight">
+                      <span className="font-semibold text-foreground">
+                        {selectedKeys === "all" ? rows.length : selectedKeys.size}
+                      </span>
+                      <span className="text-muted-foreground text-sm !tracking-tight">
+                        selected
+                      </span>
+                    </div>
+                    <div className="h-4 w-[1px] bg-gray-300 dark:bg-gray-600"></div>
+                    <Button
+                      size="sm"
+                      variant="light"
+                      className="text-muted-foreground hover:text-gray-700 rounded dark:hover:text-gray-200 min-w-0 px-2 !tracking-normal"
+                      onPress={() =>
+                        onSelectionChange && onSelectionChange(new Set([]))
+                      }
+                    >
+                      Clear
+                    </Button>
                   </div>
-                  <div className="h-4 w-[1px] bg-border"></div>
-                  <Button
-                    size="sm"
-                    variant="light"
-                    className="text-muted-foreground hover:text-foreground text-xs min-w-0 px-2 h-7 rounded-lg font-medium"
-                    onPress={() =>
-                      onSelectionChange && onSelectionChange(new Set([]))
-                    }
-                  >
-                    Clear
-                  </Button>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  {selectionActions.map((action, index) => (
-                    <React.Fragment key={index}>
-                      {action.customComponent ? (
-                        action.customComponent
-                      ) : (
-                        <Button
-                          isLoading={action.loading}
-                          variant={action.variant || "flat"}
-                          size="sm"
-                          color={action.color || "default"}
-                          className={
-                            action.className || "text-xs font-semibold rounded-xl h-8 px-3"
-                          }
-                          startContent={
-                            action.icon ? (
-                              typeof action.icon === "string" ? (
-                                <Icon
-                                  icon={action.icon}
-                                  className="text-[16px]"
-                                />
-                              ) : (
-                                action.icon
-                              )
-                            ) : undefined
-                          }
-                          onPress={action.onPress}
-                        >
-                          {action.title}
-                        </Button>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
-              </motion.div>
+                  <div className="flex items-center gap-2">
+                    {selectionActions.map((action, index) => (
+                      <React.Fragment key={index}>
+                        {action.customComponent ? (
+                          action.customComponent
+                        ) : (
+                          <Button
+                            isLoading={action.loading}
+                            variant={action.variant || "light"}
+                            size="sm"
+                            color={action.color || "default"}
+                            className={
+                              action.className || "rounded !tracking-tight"
+                            }
+                            startContent={
+                              action.icon ? (
+                                typeof action.icon === "string" ? (
+                                  <Icon
+                                    icon={action.icon}
+                                    className="text-[18px]"
+                                  />
+                                ) : (
+                                  action.icon
+                                )
+                              ) : undefined
+                            }
+                            onPress={action.onPress}
+                          >
+                            {action.title}
+                          </Button>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </motion.div>
+              </div>
             )}
         </AnimatePresence>
       </div>

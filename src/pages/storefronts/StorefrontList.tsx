@@ -395,72 +395,80 @@ export default function StorefrontList() {
     }
   };
 
-  // Floating Action Bar actions for multi-row selection
-  const selectionActions: TopContentAction[] = [
-    {
-      title: "Activate",
-      icon: "ph:check-circle-bold",
-      color: "success",
-      variant: "flat",
-      onPress: () => {
-        const ids = getSelectedStoreIds();
-        if (ids.length === 0) return;
-        setConfirmModal({
-          isOpen: true,
-          type: 'bulk_activate',
-          targetIds: ids,
-          title: `Activate ${ids.length} Storefront(s)?`,
-          description: `This will bring ${ids.length} selected merchant storefront(s) to live Active status.`,
-          confirmLabel: "Activate Stores",
-          variant: "default",
-        });
-      },
-    },
-    {
-      title: "Pause",
-      icon: "ph:pause-circle-bold",
-      color: "warning",
-      variant: "flat",
-      onPress: () => {
-        const ids = getSelectedStoreIds();
-        if (ids.length === 0) return;
-        setConfirmModal({
-          isOpen: true,
-          type: 'bulk_pause',
-          targetIds: ids,
-          title: `Pause ${ids.length} Storefront(s)?`,
-          description: `Are you sure you want to put ${ids.length} selected storefront(s) into Maintenance mode? Customers will temporarily be unable to browse or place orders.`,
-          confirmLabel: "Pause Stores",
-          variant: "warning",
-        });
-      },
-    },
-    {
+  // Dynamic Floating Action Bar actions for multi-row selection
+  const selectionActions: TopContentAction[] = React.useMemo(() => {
+    const selectedIds = getSelectedStoreIds();
+    if (selectedIds.length === 0) return [];
+
+    const selectedStores = storefronts.filter((s) => selectedIds.includes(s.id));
+    const activeStores = selectedStores.filter((s) => s.status === 'active');
+    const inactiveStores = selectedStores.filter((s) => s.status !== 'active');
+
+    const actions: TopContentAction[] = [];
+
+    // Show 'Activate' only if there are inactive/maintenance stores selected
+    if (inactiveStores.length > 0) {
+      actions.push({
+        title: inactiveStores.length === selectedStores.length ? "Activate" : `Activate (${inactiveStores.length})`,
+        icon: "ph:check-circle-bold",
+        onPress: () => {
+          const idsToActivate = inactiveStores.map((s) => s.id);
+          setConfirmModal({
+            isOpen: true,
+            type: 'bulk_activate',
+            targetIds: idsToActivate,
+            title: `Activate ${idsToActivate.length} Storefront(s)?`,
+            description: `This will bring ${idsToActivate.length} selected merchant storefront(s) to live Active status.`,
+            confirmLabel: "Activate Stores",
+            variant: "default",
+          });
+        },
+      });
+    }
+
+    // Show 'Pause' only if there are active live stores selected
+    if (activeStores.length > 0) {
+      actions.push({
+        title: activeStores.length === selectedStores.length ? "Pause" : `Pause (${activeStores.length})`,
+        icon: "ph:pause-circle-bold",
+        onPress: () => {
+          const idsToPause = activeStores.map((s) => s.id);
+          setConfirmModal({
+            isOpen: true,
+            type: 'bulk_pause',
+            targetIds: idsToPause,
+            title: `Pause ${idsToPause.length} Storefront(s)?`,
+            description: `Are you sure you want to put ${idsToPause.length} selected storefront(s) into Maintenance mode? Customers will temporarily be unable to browse or place orders.`,
+            confirmLabel: "Pause Stores",
+            variant: "warning",
+          });
+        },
+      });
+    }
+
+    // Always provide Export CSV
+    actions.push({
       title: "Export CSV",
       icon: "ph:download-simple-bold",
-      variant: "flat",
       onPress: () => {
-        const ids = getSelectedStoreIds();
-        exportStorefrontsCSV(ids);
+        exportStorefrontsCSV(selectedIds);
       },
-    },
-    {
+    });
+
+    // Delete
+    actions.push({
       title: "Delete",
       icon: "ph:trash-bold",
-      color: "danger",
-      variant: "flat",
       onPress: () => {
-        const ids = getSelectedStoreIds();
-        if (ids.length === 0) return;
         setConfirmModal({
           isOpen: true,
           type: 'bulk_delete',
-          targetIds: ids,
-          title: `Decommission ${ids.length} Storefront(s)?`,
+          targetIds: selectedIds,
+          title: `Decommission ${selectedIds.length} Storefront(s)?`,
           description: (
             <div className="space-y-3 text-xs text-muted-foreground">
               <p>
-                This will permanently delete the online storefront deployments for {ids.length} selected store(s).
+                This will permanently delete the online storefront deployments for {selectedIds.length} selected store(s).
               </p>
               <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-700 dark:text-emerald-400 font-medium">
                 ✅ Physical in-store POS, cashiers, stock, and sales records will continue operating without interruption.
@@ -471,8 +479,10 @@ export default function StorefrontList() {
           variant: "danger",
         });
       },
-    },
-  ];
+    });
+
+    return actions;
+  }, [selectedKeys, storefronts, getSelectedStoreIds]);
 
   const handleConfirmAction = () => {
     if (confirmModal.type === 'pause' && confirmModal.targetStore) {
