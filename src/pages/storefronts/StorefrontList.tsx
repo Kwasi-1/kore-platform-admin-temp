@@ -8,20 +8,18 @@ import {
 import { useCurrency } from '@/hooks/useCurrency';
 import PageLayout from '@/components/layout/PageLayout';
 import DashboardCard from '@/components/ui/dashboard-card';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { getPlanConfig } from '@/config/plans';
 import ProvisionStorefrontModal from '@/components/storefronts/ProvisionStorefrontModal';
+import EnhancedTableComponent, { TableColumn } from '@/components/shared/MainTableComponent';
 import { 
   Globe, 
   Store, 
   ExternalLink, 
-  Search, 
   Sparkles, 
   Activity, 
-  ShoppingBag, 
   CheckCircle, 
   AlertTriangle, 
   Power,
@@ -83,12 +81,159 @@ export default function StorefrontList() {
     }
   };
 
-  const statusOptions = [
-    { label: 'All Stores', value: 'all' },
-    { label: 'Active Live', value: 'active' },
-    { label: 'Maintenance', value: 'maintenance' },
-    { label: 'Unpublished', value: 'unpublished' },
+  const statusFilterOptions = [
+    { name: 'All Stores', uid: 'all' },
+    { name: 'Active Live', uid: 'active' },
+    { name: 'Maintenance', uid: 'maintenance' },
+    { name: 'Unpublished', uid: 'unpublished' },
   ];
+
+  const columns: TableColumn[] = [
+    { key: 'store', label: 'Store & Merchant' },
+    { key: 'plan', label: 'Plan' },
+    { key: 'storefront_url', label: 'Live Storefront' },
+    { key: 'template', label: 'Template' },
+    { key: 'orders_count', label: 'Web Orders' },
+    { key: 'online_gmv', label: 'Online GMV' },
+    { key: 'status', label: 'Status' },
+  ];
+
+  const defaultRowActions = [
+    {
+      key: 'visit',
+      label: 'Visit Live Store',
+      icon: 'heroicons:arrow-top-right-on-square',
+    },
+    {
+      key: 'edit_ai',
+      label: 'AI Re-Generate / Edit',
+      icon: 'heroicons:sparkles',
+    },
+    {
+      key: 'toggle_status',
+      label: 'Toggle Status',
+      icon: 'heroicons:power',
+    },
+  ];
+
+  const rows = React.useMemo(() => {
+    return storefronts.map((store: StorefrontItem) => {
+      const planCfg = getPlanConfig(store.tenant_plan);
+      const isLive = store.status === 'active';
+      const isMaintenance = store.status === 'maintenance';
+      const isLinea = store.template_id === 'linea-luxury';
+
+      return {
+        id: store.id,
+        store: (
+          <div className="flex flex-col py-0.5">
+            <span className="font-bold text-foreground text-xs md:text-sm font-header">
+              {unescapeName(store.tenant_name)}
+            </span>
+            <span className="text-[11px] text-muted-foreground font-mono">
+              {store.subdomain}
+            </span>
+          </div>
+        ),
+        plan: (
+          <Badge className={clsx("text-[10px] px-2 py-0.5 font-bold uppercase", planCfg.badgeClassName)}>
+            {planCfg.label}
+          </Badge>
+        ),
+        storefront_url: (
+          <div className="flex items-center gap-1.5 max-w-[240px]">
+            {store.custom_domain ? (
+              <a
+                href={`https://${store.custom_domain}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-mono font-semibold text-muted-foreground hover:underline truncate inline-flex items-center gap-1"
+                title={`https://${store.custom_domain}`}
+              >
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                <span className="truncate">{store.custom_domain}</span>
+                <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />
+              </a>
+            ) : (
+              <a
+                href={store.storefront_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-mono font-semibold text-muted-foreground  hover:underline truncate inline-flex items-center gap-1"
+                title={store.storefront_url}
+              >
+                <span className="truncate">{store.storefront_url}</span>
+                <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />
+              </a>
+            )}
+          </div>
+        ),
+        template: (
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-muted/60 text-foreground border border-border">
+            <span className={clsx("h-2 w-2 rounded-full", isLinea ? "bg-amber-500" : "bg-blue-500")} />
+            {isLinea ? 'Linea Luxe' : 'Vetshore Flow'}
+          </div>
+        ),
+        orders_count: (
+          <span className="font-bold text-xs text-foreground">
+            {store.orders_count.toLocaleString()}
+          </span>
+        ),
+        online_gmv: (
+          <span className="font-bold text-xs text-foreground">
+            {formatGHS(store.online_gmv)}
+          </span>
+        ),
+        status: (
+          <span className={clsx(
+            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+            isLive 
+              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+              : isMaintenance
+              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+              : "bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border border-neutral-500/20"
+          )}>
+            <span className={clsx("h-1.5 w-1.5 rounded-full", isLive ? "bg-emerald-500 animate-pulse" : isMaintenance ? "bg-amber-500" : "bg-neutral-400")} />
+            {store.status}
+          </span>
+        ),
+        rowActions: [
+          {
+            key: 'visit',
+            label: 'Visit Live Store',
+            icon: 'heroicons:arrow-top-right-on-square',
+          },
+          {
+            key: 'edit_ai',
+            label: 'AI Re-Generate / Edit',
+            icon: 'heroicons:sparkles',
+          },
+          {
+            key: 'toggle_status',
+            label: isLive ? 'Pause Storefront' : 'Activate Storefront',
+            icon: 'heroicons:power',
+            className: isLive ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400',
+          },
+        ],
+        __record: store
+      };
+    });
+  }, [storefronts, formatGHS]);
+
+  const handleRowActionClick = (actionKey: string, row: any) => {
+    const store = row.__record as StorefrontItem;
+    if (actionKey === 'visit') {
+      window.open(store.storefront_url, '_blank');
+    } else if (actionKey === 'edit_ai') {
+      navigate(`/storefronts/generate?tenant_id=${store.tenant_id}`);
+    } else if (actionKey === 'toggle_status') {
+      const isLive = store.status === 'active';
+      statusMutation.mutate({
+        id: store.id,
+        status: isLive ? 'maintenance' : 'active',
+      });
+    }
+  };
 
   return (
     <PageLayout
@@ -138,178 +283,56 @@ export default function StorefrontList() {
           <DashboardCard
             title="Total Storefronts"
             value={isLoading ? <Spinner /> : (summary?.total_storefronts ?? 0).toLocaleString()}
-            // subvalue="Configured merchant web stores"
             action={<Store className="h-5 w-5 text-muted-foreground" />}
           />
           <DashboardCard
             title="Active Live Stores"
             value={isLoading ? <Spinner /> : (summary?.active_stores ?? 0).toLocaleString()}
-            // subvalue="Storefronts accepting online orders"
             action={<CheckCircle className="h-5 w-5 text-muted-foreground" />}
           />
           <DashboardCard
             title="Custom Domains"
             value={isLoading ? <Spinner /> : (summary?.custom_domains_count ?? 0).toLocaleString()}
-            // subvalue="Verified custom domains connected"
             action={<Globe className="h-5 w-5 text-muted-foreground" />}
           />
           <DashboardCard
             title="Total Web GMV"
             value={isLoading ? <Spinner /> : formatGHS(summary?.total_web_gmv ?? 0)}
-            // subvalue="Sales volume via online store checkouts"
             action={<Activity className="h-5 w-5 text-muted-foreground" />}
           />
         </div>
 
-        {/* 2. Controls & Search Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          {/* Search bar */}
-          <div className="w-full sm:w-[320px] relative">
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search storefront name, tenant, or domain…"
-              startContent={<Search className="h-4 w-4 text-muted-foreground" />}
-              className="rounded-xl h-10 text-xs"
-            />
-          </div>
+        {/* 2. Main Storefront Table with Dropdown Actions */}
+        <EnhancedTableComponent
+          columns={columns}
+          rows={rows}
+          isLoading={isLoading}
+          rowActions={defaultRowActions}
+          onRowActionClick={handleRowActionClick}
+          
+          showTopContent={true}
+          
+          showSearch={true}
+          searchPlaceholder="Search storefront, tenant, or domain…"
+          searchValue={search}
+          onSearchChange={setSearch}
 
-          {/* Filter Status selector */}
-          <div className="flex bg-secondary p-1 rounded-xl h-10">
-            {statusOptions.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setStatusFilter(opt.value)}
-                className={clsx(
-                  "px-3 rounded-lg text-xs font-semibold transition-all duration-200",
-                  statusFilter === opt.value
-                    ? "bg-card text-foreground shadow-xs ring-1 ring-border/50"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
+          showFilter={true}
+          filterLabel="Status"
+          filterOptions={statusFilterOptions}
+          filterValue={new Set([statusFilter])}
+          onFilterChange={(keys) => {
+            const val = Array.from(keys)[0] as string;
+            setStatusFilter(val || 'all');
+          }}
 
-        {/* 3. Storefronts Cards Directory */}
-        {isLoading ? (
-          <div className="h-64 bg-card border border-border rounded-xl flex items-center justify-center">
-            <Spinner />
-          </div>
-        ) : storefronts.length === 0 ? (
-          <div className="bg-card border border-border/70 rounded-xl p-12 text-center space-y-3 shadow-xs">
-            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
-              <ShoppingBag className="h-6 w-6" />
-            </div>
-            <h3 className="text-base font-bold text-foreground font-header">No Deployed Storefronts Found</h3>
-            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-              Get started by provisioning a digital web storefront for an active merchant on the platform.
-            </p>
-            <Button
-              onClick={() => handleOpenProvision()}
-              variant="outline"
-              className="rounded-xl font-bold text-xs h-9 px-4 mt-2 border-border"
-            >
-              <Plus className="h-4 w-4 mr-1" /> Provision First Storefront
-            </Button>
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 bg-card border border-border/70 rounded-xl p-6">
-            {storefronts.map((store) => {
-              const planCfg = getPlanConfig(store.tenant_plan);
-              const isLive = store.status === 'active';
-              return (
-                <div
-                  key={store.id}
-                  className="bg-card border border-border/70 rounded-xl p-5 space-y-4 shadow-xs flex flex-col justify-between hover:border-foreground/30 transition-all group"
-                >
-                  <div className="space-y-3">
-                    {/* Header: Store Name & Plan */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="text-sm font-bold text-foreground font-header transition-colors">
-                          {unescapeName(store.tenant_name)}
-                        </h4>
-                        <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
-                          {store.subdomain}
-                        </p>
-                      </div>
+          showAddButton={true}
+          addButtonText="Generate Storefront"
+          addButtonIcon="ph:sparkle-bold"
+          onAddButtonClick={() => navigate('/storefronts/generate')}
 
-                      <Badge className={planCfg.badgeClassName}>{planCfg.label}</Badge>
-                    </div>
-
-                    {/* Status & Custom Domain Badges */}
-                    <div className="flex items-center gap-2 pt-1">
-                      <span className={clsx(
-                        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                        isLive 
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                      )}>
-                        <span className={clsx("h-1.5 w-1.5 rounded-full", isLive ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
-                        {store.status}
-                      </span>
-
-                      {store.custom_domain ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] bg-muted/60 text-foreground border border-border px-2.5 py-0.5 rounded-full font-medium">
-                          <ShieldCheck className="h-3 w-3" /> {store.custom_domain}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground bg-muted/40 border border-border/50 px-2 py-0.5 rounded-full">
-                          Template: {store.template_id}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Performance metrics row */}
-                    <div className="grid grid-cols-2 gap-2 bg-muted/30 rounded-md p-2.5 text-xs">
-                      <div>
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold">Web Orders</span>
-                        <p className="font-bold text-foreground">{store.orders_count.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-muted-foreground uppercase font-semibold">Online GMV</span>
-                        <p className="font-bold text-foreground">{formatGHS(store.online_gmv)}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions Row */}
-                  <div className="pt-3 border-t border-border/60 flex items-center justify-between gap-2">
-                    <a
-                      href={store.storefront_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-foreground hover:underline"
-                    >
-                      Visit Store <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                    </a>
-
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          statusMutation.mutate({
-                            id: store.id,
-                            status: isLive ? 'maintenance' : 'active',
-                          })
-                        }
-                        className="rounded-lg h-8 text-[11px] font-semibold px-2.5 border-border"
-                      >
-                        <Power className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                        {isLive ? 'Pause' : 'Activate'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+          onRefresh={() => queryClient.invalidateQueries({ queryKey: ['platform-storefronts'] })}
+        />
 
         {/* Provisioning Wizard Modal */}
         <ProvisionStorefrontModal
@@ -323,3 +346,4 @@ export default function StorefrontList() {
     </PageLayout>
   );
 }
+
