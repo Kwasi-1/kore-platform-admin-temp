@@ -3,6 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   getPlatformStorefronts, 
   updateStorefrontStatus, 
+  deleteStorefront,
+  bulkUpdateStorefrontStatus,
+  bulkDeleteStorefronts,
   StorefrontItem 
 } from '@/api/platform';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -13,7 +16,15 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { getPlanConfig } from '@/config/plans';
 import ProvisionStorefrontModal from '@/components/storefronts/ProvisionStorefrontModal';
-import EnhancedTableComponent, { TableColumn } from '@/components/shared/MainTableComponent';
+import EnhancedTableComponent, { TableColumn, TopContentAction } from '@/components/shared/MainTableComponent';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { 
   Globe, 
   Store, 
@@ -24,7 +35,8 @@ import {
   AlertTriangle, 
   Power,
   ShieldCheck,
-  Plus
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -34,6 +46,17 @@ const unescapeName = (str: string) => {
   return (str || '').replace(/&#x27;/g, "'").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
 };
 
+interface ConfirmModalState {
+  isOpen: boolean;
+  type: 'pause' | 'activate' | 'delete' | 'bulk_pause' | 'bulk_activate' | 'bulk_delete';
+  targetStore?: StorefrontItem;
+  targetIds?: string[];
+  title: string;
+  description: React.ReactNode;
+  confirmLabel: string;
+  variant: 'default' | 'danger' | 'warning';
+}
+
 export default function StorefrontList() {
   const navigate = useNavigate();
   const { formatGHS } = useCurrency();
@@ -41,8 +64,19 @@ export default function StorefrontList() {
 
   const [search, setSearch] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
+  const [selectedKeys, setSelectedKeys] = React.useState<any>(new Set([]));
   const [provisionModalOpen, setProvisionModalOpen] = React.useState(false);
   const [selectedTenantForModal, setSelectedTenantForModal] = React.useState<string | undefined>(undefined);
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = React.useState<ConfirmModalState>({
+    isOpen: false,
+    type: 'pause',
+    title: '',
+    description: null,
+    confirmLabel: 'Confirm',
+    variant: 'default',
+  });
 
   // Fetch Storefronts list & eligible tenants
   const { data: serverData, isLoading } = useQuery({
@@ -60,25 +94,108 @@ export default function StorefrontList() {
     return eligibleTenants.filter((t) => !t.has_storefront && t.is_recommended);
   }, [eligibleTenants]);
 
-  // Mutation to toggle status
+  // Mutation to toggle single status
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'active' | 'maintenance' | 'unpublished' }) =>
       updateStorefrontStatus(id, status),
     onSuccess: () => {
       toast.success('Storefront status updated.');
       queryClient.invalidateQueries({ queryKey: ['platform-storefronts'] });
+      setConfirmModal((prev) => ({ ...prev, isOpen: false }));
     },
-    onError: () => {
-      toast.error('Failed to update status.');
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error || 'Failed to update status.');
     },
   });
 
-  const handleOpenProvision = (tenantId?: string) => {
-    if (tenantId) {
-      navigate(`/storefronts/generate?tenant_id=${tenantId}`);
-    } else {
-      navigate('/storefronts/generate');
+  // Mutation to delete single storefront
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteStorefront(id),
+    onSuccess: (msg) => {
+      toast.success(typeof msg === 'string' ? msg : 'Storefront decommissioned successfully. POS remains active.');
+      queryClient.invalidateQueries({ queryKey: ['platform-storefronts'] });
+      setSelectedKeys(new Set([]));
+      setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error || 'Failed to delete storefront.');
+    },
+  });
+
+  // Mutation for bulk status update
+  const bulkStatusMutation = useMutation({
+    mutationFn: ({ ids, status }: { ids: string[]; status: 'active' | 'maintenance' | 'unpublished' }) =>
+      bulkUpdateStorefrontStatus(ids, status),
+    onSuccess: (msg) => {
+      toast.success(typeof msg === 'string' ? msg : 'Selected storefronts updated.');
+      queryClient.invalidateQueries({ queryKey: ['platform-storefronts'] });
+      setSelectedKeys(new Set([]));
+      setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error || 'Failed to update selected storefronts.');
+    },
+  });
+
+  // Mutation for bulk delete
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: string[]) => bulkDeleteStorefronts(ids),
+    onSuccess: (msg) => {
+      toast.success(typeof msg === 'string' ? msg : 'Selected storefronts decommissioned.');
+      queryClient.invalidateQueries({ queryKey: ['platform-storefronts'] });
+      setSelectedKeys(new Set([]));
+      setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error || 'Failed to delete selected storefronts.');
+    },
+  });
+
+  // Helper to extract selected IDs
+  const getSelectedStoreIds = React.useCallback((): string[] => {
+    if (selectedKeys === 'all') {
+      return storefronts.map((s) => s.id);
     }
+    if (selectedKeys instanceof Set) {
+      return Array.from(selectedKeys).map(String);
+    }
+    return [];
+  }, [selectedKeys, storefronts]);
+
+  // Export selected / all storefronts to CSV
+  const exportStorefrontsCSV = (selectedIds?: string[]) => {
+    const itemsToExport = selectedIds && selectedIds.length > 0
+      ? storefronts.filter((s) => selectedIds.includes(s.id))
+      : storefronts;
+
+    if (itemsToExport.length === 0) {
+      toast.error('No storefronts available to export');
+      return;
+    }
+
+    const headers = ['Merchant Name', 'Slug', 'Plan', 'Template', 'Subdomain', 'Custom Domain', 'Live URL', 'Orders Count', 'Online GMV (GHS)', 'Status'];
+    const csvRows = itemsToExport.map((s) => [
+      `"${unescapeName(s.tenant_name).replace(/"/g, '""')}"`,
+      `"${s.tenant_slug}"`,
+      `"${s.tenant_plan}"`,
+      `"${s.template_id}"`,
+      `"${s.subdomain}"`,
+      `"${s.custom_domain || ''}"`,
+      `"${s.storefront_url}"`,
+      s.orders_count,
+      s.online_gmv.toFixed(2),
+      `"${s.status}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...csvRows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `storefronts_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Exported ${itemsToExport.length} storefront(s) to CSV`);
   };
 
   const statusFilterOptions = [
@@ -113,6 +230,12 @@ export default function StorefrontList() {
       key: 'toggle_status',
       label: 'Toggle Status',
       icon: 'heroicons:power',
+    },
+    {
+      key: 'delete_storefront',
+      label: 'Delete Storefront Only',
+      icon: 'heroicons:trash',
+      className: 'text-danger',
     },
   ];
 
@@ -159,7 +282,7 @@ export default function StorefrontList() {
                 href={store.storefront_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs font-mono font-semibold text-muted-foreground  hover:underline truncate inline-flex items-center gap-1"
+                className="text-xs font-mono font-semibold text-muted-foreground hover:underline truncate inline-flex items-center gap-1"
                 title={store.storefront_url}
               >
                 <span className="truncate">{store.storefront_url}</span>
@@ -214,6 +337,12 @@ export default function StorefrontList() {
             icon: 'heroicons:power',
             className: isLive ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400',
           },
+          {
+            key: 'delete_storefront',
+            label: 'Delete Storefront Only',
+            icon: 'heroicons:trash',
+            className: 'text-danger font-medium',
+          },
         ],
         __record: store
       };
@@ -228,12 +357,151 @@ export default function StorefrontList() {
       navigate(`/storefronts/generate?tenant_id=${store.tenant_id}`);
     } else if (actionKey === 'toggle_status') {
       const isLive = store.status === 'active';
-      statusMutation.mutate({
-        id: store.id,
-        status: isLive ? 'maintenance' : 'active',
+      if (isLive) {
+        setConfirmModal({
+          isOpen: true,
+          type: 'pause',
+          targetStore: store,
+          title: `Pause Storefront for ${unescapeName(store.tenant_name)}?`,
+          description: `Are you sure you want to put this storefront into Maintenance Mode? Online visitors to ${store.subdomain} will temporarily not be able to browse or place orders.`,
+          confirmLabel: "Pause Storefront",
+          variant: "warning",
+        });
+      } else {
+        statusMutation.mutate({
+          id: store.id,
+          status: 'active',
+        });
+      }
+    } else if (actionKey === 'delete_storefront') {
+      setConfirmModal({
+        isOpen: true,
+        type: 'delete',
+        targetStore: store,
+        title: `Delete Online Storefront for ${unescapeName(store.tenant_name)}?`,
+        description: (
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <p>
+              This will decommission and delete the digital web storefront deployment (<strong className="text-foreground font-mono">{store.subdomain}</strong>).
+            </p>
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-700 dark:text-emerald-400 font-medium">
+              ✅ <strong>Safe Decommission</strong>: The merchant&apos;s in-person POS registers, product catalog, sales receipts, staff, and inventory will remain 100% active and untouched.
+            </div>
+          </div>
+        ),
+        confirmLabel: "Delete Storefront Only",
+        variant: "danger",
       });
     }
   };
+
+  // Floating Action Bar actions for multi-row selection
+  const selectionActions: TopContentAction[] = [
+    {
+      title: "Activate",
+      icon: "ph:check-circle-bold",
+      color: "success",
+      variant: "flat",
+      onPress: () => {
+        const ids = getSelectedStoreIds();
+        if (ids.length === 0) return;
+        setConfirmModal({
+          isOpen: true,
+          type: 'bulk_activate',
+          targetIds: ids,
+          title: `Activate ${ids.length} Storefront(s)?`,
+          description: `This will bring ${ids.length} selected merchant storefront(s) to live Active status.`,
+          confirmLabel: "Activate Stores",
+          variant: "default",
+        });
+      },
+    },
+    {
+      title: "Pause",
+      icon: "ph:pause-circle-bold",
+      color: "warning",
+      variant: "flat",
+      onPress: () => {
+        const ids = getSelectedStoreIds();
+        if (ids.length === 0) return;
+        setConfirmModal({
+          isOpen: true,
+          type: 'bulk_pause',
+          targetIds: ids,
+          title: `Pause ${ids.length} Storefront(s)?`,
+          description: `Are you sure you want to put ${ids.length} selected storefront(s) into Maintenance mode? Customers will temporarily be unable to browse or place orders.`,
+          confirmLabel: "Pause Stores",
+          variant: "warning",
+        });
+      },
+    },
+    {
+      title: "Export CSV",
+      icon: "ph:download-simple-bold",
+      variant: "flat",
+      onPress: () => {
+        const ids = getSelectedStoreIds();
+        exportStorefrontsCSV(ids);
+      },
+    },
+    {
+      title: "Delete",
+      icon: "ph:trash-bold",
+      color: "danger",
+      variant: "flat",
+      onPress: () => {
+        const ids = getSelectedStoreIds();
+        if (ids.length === 0) return;
+        setConfirmModal({
+          isOpen: true,
+          type: 'bulk_delete',
+          targetIds: ids,
+          title: `Decommission ${ids.length} Storefront(s)?`,
+          description: (
+            <div className="space-y-3 text-xs text-muted-foreground">
+              <p>
+                This will permanently delete the online storefront deployments for {ids.length} selected store(s).
+              </p>
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-700 dark:text-emerald-400 font-medium">
+                ✅ Physical in-store POS, cashiers, stock, and sales records will continue operating without interruption.
+              </div>
+            </div>
+          ),
+          confirmLabel: "Decommission Stores",
+          variant: "danger",
+        });
+      },
+    },
+  ];
+
+  const handleConfirmAction = () => {
+    if (confirmModal.type === 'pause' && confirmModal.targetStore) {
+      statusMutation.mutate({
+        id: confirmModal.targetStore.id,
+        status: 'maintenance',
+      });
+    } else if (confirmModal.type === 'delete' && confirmModal.targetStore) {
+      deleteMutation.mutate(confirmModal.targetStore.id);
+    } else if (confirmModal.type === 'bulk_activate' && confirmModal.targetIds) {
+      bulkStatusMutation.mutate({
+        ids: confirmModal.targetIds,
+        status: 'active',
+      });
+    } else if (confirmModal.type === 'bulk_pause' && confirmModal.targetIds) {
+      bulkStatusMutation.mutate({
+        ids: confirmModal.targetIds,
+        status: 'maintenance',
+      });
+    } else if (confirmModal.type === 'bulk_delete' && confirmModal.targetIds) {
+      bulkDeleteMutation.mutate(confirmModal.targetIds);
+    }
+  };
+
+  const isActionPending =
+    statusMutation.isPending ||
+    deleteMutation.isPending ||
+    bulkStatusMutation.isPending ||
+    bulkDeleteMutation.isPending;
 
   return (
     <PageLayout
@@ -241,6 +509,13 @@ export default function StorefrontList() {
       subtitle="Deploy, configure, and monitor digital web storefronts and custom domains for merchants."
       actions={
         <div className="flex items-center gap-2">
+          <Button
+            onClick={() => exportStorefrontsCSV()}
+            variant="outline"
+            className="font-semibold text-xs h-10 px-3.5 flex items-center gap-2 rounded-xl border-border"
+          >
+            Export All
+          </Button>
           <Button
             onClick={() => navigate('/storefronts/generate')}
             className="font-bold text-xs h-10 px-4 flex items-center gap-2 rounded-xl"
@@ -302,13 +577,18 @@ export default function StorefrontList() {
           />
         </div>
 
-        {/* 2. Main Storefront Table with Dropdown Actions */}
+        {/* 2. Main Storefront Table with Dropdown Actions & Multi-select Floating Bar */}
         <EnhancedTableComponent
           columns={columns}
           rows={rows}
           isLoading={isLoading}
           rowActions={defaultRowActions}
           onRowActionClick={handleRowActionClick}
+          
+          selectionMode="multiple"
+          selectedKeys={selectedKeys}
+          onSelectionChange={setSelectedKeys}
+          selectionActions={selectionActions}
           
           showTopContent={true}
           
@@ -342,8 +622,68 @@ export default function StorefrontList() {
           defaultTenantId={selectedTenantForModal}
         />
 
+        {/* Confirmation Modal */}
+        <Dialog open={confirmModal.isOpen} onOpenChange={(open) => setConfirmModal((prev) => ({ ...prev, isOpen: open }))}>
+          <DialogContent className="sm:max-w-md bg-card border border-border/80 rounded-2xl p-6 shadow-xl">
+            <DialogHeader className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div
+                  className={clsx(
+                    "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
+                    confirmModal.variant === 'danger'
+                      ? "bg-rose-500/10 text-rose-500"
+                      : confirmModal.variant === 'warning'
+                      ? "bg-amber-500/10 text-amber-500"
+                      : "bg-primary/10 text-primary"
+                  )}
+                >
+                  {confirmModal.variant === 'danger' ? (
+                    <Trash2 className="h-5 w-5" />
+                  ) : confirmModal.variant === 'warning' ? (
+                    <AlertTriangle className="h-5 w-5" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5" />
+                  )}
+                </div>
+                <DialogTitle className="text-base font-bold font-header text-foreground text-left">
+                  {confirmModal.title}
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-xs text-muted-foreground pt-1 text-left">
+                {confirmModal.description}
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter className="flex items-center justify-end gap-2 pt-4 border-t border-border/60">
+              <Button
+                variant="outline"
+                onClick={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+                disabled={isActionPending}
+                className="rounded-xl text-xs font-semibold h-9 px-4 border-border"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmAction}
+                disabled={isActionPending}
+                className={clsx(
+                  "rounded-xl text-xs font-bold h-9 px-4 gap-1.5",
+                  confirmModal.variant === 'danger'
+                    ? "bg-rose-600 hover:bg-rose-700 text-white"
+                    : confirmModal.variant === 'warning'
+                    ? "bg-amber-600 hover:bg-amber-700 text-white"
+                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                )}
+              >
+                {isActionPending ? <Spinner /> : confirmModal.confirmLabel}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </PageLayout>
   );
 }
+
 

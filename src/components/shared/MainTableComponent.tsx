@@ -613,22 +613,22 @@ const EnhancedTableComponent: React.FC<EnhancedTableProps> = ({
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 100, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-white border border-border dark:border-gray-700 shadow-xl rounded px-6 py-3 flex items-center gap-6 min-w-[300px] justify-between"
+                className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-background/95 border border-border shadow-2xl rounded-2xl px-5 py-3 flex items-center gap-4 min-w-[320px] justify-between backdrop-blur-md"
               >
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-foreground">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-foreground text-sm">
                       {selectedKeys === "all" ? rows.length : selectedKeys.size}
                     </span>
-                    <span className="text-muted-foreground text-sm">
+                    <span className="text-muted-foreground text-xs font-medium">
                       selected
                     </span>
                   </div>
-                  <div className="h-4 w-[1px] bg-gray-300 dark:bg-gray-600"></div>
+                  <div className="h-4 w-[1px] bg-border"></div>
                   <Button
                     size="sm"
                     variant="light"
-                    className="text-muted-foreground hover:text-gray-700 rounded-none dark:hover:text-gray-200 min-w-0 px-2"
+                    className="text-muted-foreground hover:text-foreground text-xs min-w-0 px-2 h-7 rounded-lg font-medium"
                     onPress={() =>
                       onSelectionChange && onSelectionChange(new Set([]))
                     }
@@ -645,18 +645,18 @@ const EnhancedTableComponent: React.FC<EnhancedTableProps> = ({
                       ) : (
                         <Button
                           isLoading={action.loading}
-                          variant={action.variant || "light"}
+                          variant={action.variant || "flat"}
                           size="sm"
                           color={action.color || "default"}
                           className={
-                            action.className || "rounded-none text-primary-cct"
+                            action.className || "text-xs font-semibold rounded-xl h-8 px-3"
                           }
                           startContent={
                             action.icon ? (
                               typeof action.icon === "string" ? (
                                 <Icon
                                   icon={action.icon}
-                                  className="text-[18px]"
+                                  className="text-[16px]"
                                 />
                               ) : (
                                 action.icon

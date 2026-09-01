@@ -370,6 +370,26 @@ export const updateStorefrontStatus = async (deploymentId: string, status: 'acti
   return data?.success?.data;
 };
 
+export const deleteStorefront = async (deploymentId: string) => {
+  const { data } = await apiClient.delete<any>(`/api/v1/platform/storefronts/${deploymentId}`);
+  return data?.success?.data || data?.success?.message;
+};
+
+export const bulkUpdateStorefrontStatus = async (deploymentIds: string[], status: 'active' | 'maintenance' | 'unpublished') => {
+  const { data } = await apiClient.post<any>('/api/v1/platform/storefronts/bulk-status', {
+    deployment_ids: deploymentIds,
+    status,
+  });
+  return data?.success?.message || data?.success?.data;
+};
+
+export const bulkDeleteStorefronts = async (deploymentIds: string[]) => {
+  const { data } = await apiClient.post<any>('/api/v1/platform/storefronts/bulk-delete', {
+    deployment_ids: deploymentIds,
+  });
+  return data?.success?.message || data?.success?.data;
+};
+
 export interface GeneratedStorefrontContent {
   hero: {
     badge: string;
