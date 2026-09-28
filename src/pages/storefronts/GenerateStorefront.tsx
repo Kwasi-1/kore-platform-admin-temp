@@ -152,8 +152,16 @@ export default function GenerateStorefront() {
 
   const liveStorefrontUrl = useMemo(() => {
     const slug = selectedTenant?.slug || 'my-store';
-    // Pass theme so the unified storefront activates the right layout
+    // iframe uses ?tenant= query param (reliable in cross-origin iframe context)
     return `${activeTemplate.baseUrl}/?tenant=${slug}&theme=${activeTemplate.id}&preview=true`;
+  }, [activeTemplate, selectedTenant]);
+
+  // Subdomain URL — what the merchant actually browses in a real tab.
+  // Uses *.localhost:5175 in dev (Chrome RFC 6761), *.kore-store.app in prod.
+  const subdomainUrl = useMemo(() => {
+    const slug = selectedTenant?.slug || 'my-store';
+    const port = 5175;
+    return `http://${slug}.localhost:${port}/?theme=${activeTemplate.id}`;
   }, [activeTemplate, selectedTenant]);
 
   // Auto-populate business name & slug when tenant is selected
@@ -818,20 +826,23 @@ export default function GenerateStorefront() {
               </div>
             </div>
 
-            {/* URL Bar strip */}
+            {/* URL Bar strip — shows subdomain URL for real browsing */}
             <div className="flex items-center gap-2 bg-muted/60 border border-border/60 rounded-xl px-4 py-2">
               <div className="flex items-center gap-1.5 flex-1 min-w-0">
                 <div className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="text-xs font-mono text-muted-foreground truncate">{liveStorefrontUrl}</span>
+                <span className="text-xs font-mono text-muted-foreground truncate">{subdomainUrl}</span>
               </div>
-              <a
-                href={liveStorefrontUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 text-xs font-semibold text-primary hover:underline whitespace-nowrap"
-              >
-                Open in Tab ↗
-              </a>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">SUBDOMAIN</span>
+                <a
+                  href={subdomainUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold text-primary hover:underline whitespace-nowrap"
+                >
+                  Open in Tab ↗
+                </a>
+              </div>
             </div>
 
             {/* Browser chrome + iframe */}
