@@ -67,11 +67,15 @@ const COLOR_PRESETS = [
   '#7c3aed', // Deep Purple
 ];
 
+// Single unified storefront deployment. Theme is selected by query param.
+const STOREFRONT_BASE_URL =
+  (import.meta as any).env?.VITE_STOREFRONT_BASE_URL || 'http://localhost:5175';
+
 const TEMPLATES = [
   {
     id: 'linea-luxury',
     name: 'Linea Luxe',
-    baseUrl: 'https://kore-boutique.vercel.app',
+    baseUrl: STOREFRONT_BASE_URL,
     tagline: 'Boutique, Luxury & High-Fashion Showcase',
     description: 'Minimalist editorial layout with serif typography, full-bleed imagery, gold accents, and narrative brand storytelling.',
     features: [
@@ -88,7 +92,7 @@ const TEMPLATES = [
   {
     id: 'vetshore-retail',
     name: 'Vetshore Flow',
-    baseUrl: 'https://kore-retail.vercel.app',
+    baseUrl: STOREFRONT_BASE_URL,
     tagline: 'High-Volume Retail & Essentials Catalog',
     description: 'High-speed ecommerce layout with quick category filter pills, sticky promotional banners, search-first interface, and fast checkout.',
     features: [
@@ -148,7 +152,8 @@ export default function GenerateStorefront() {
 
   const liveStorefrontUrl = useMemo(() => {
     const slug = selectedTenant?.slug || 'my-store';
-    return `${activeTemplate.baseUrl}/?tenant=${slug}`;
+    // Pass theme so the unified storefront activates the right layout
+    return `${activeTemplate.baseUrl}/?tenant=${slug}&theme=${activeTemplate.id}&preview=true`;
   }, [activeTemplate, selectedTenant]);
 
   // Auto-populate business name & slug when tenant is selected
@@ -780,15 +785,16 @@ export default function GenerateStorefront() {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 4: Live Storefront Preview                                           */}
+        {/* STEP 4: Live Storefront Preview (Real iframe)                             */}
         {/* ========================================================================= */}
         {currentStep === 4 && (
           <div className="bg-card border border-border/80 rounded-2xl p-6 md:p-8 space-y-6 shadow-xs">
+            {/* Header */}
             <div className="flex items-center justify-between border-b border-border/60 pb-4">
               <div>
-                <h3 className="text-lg font-bold font-header text-foreground">4. Real-time Storefront Preview</h3>
+                <h3 className="text-lg font-bold font-header text-foreground">4. Live Storefront Preview</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Visual canvas of how {businessName} will appear to online shoppers.
+                  You're viewing the <span className="font-semibold text-foreground">real, live</span> storefront — exactly what customers will see.
                 </p>
               </div>
 
@@ -812,98 +818,70 @@ export default function GenerateStorefront() {
               </div>
             </div>
 
-            {/* Preview Simulation Canvas */}
-            <div className="flex justify-center bg-muted/40 p-4 md:p-8 rounded-2xl border border-border/60 overflow-hidden">
-              <div
-                className={clsx(
-                  'bg-background border border-border shadow-2xl rounded-2xl overflow-hidden transition-all duration-300 flex flex-col',
-                  previewDevice === 'mobile' ? 'w-[375px] min-h-[640px]' : 'w-full max-w-4xl min-h-[500px]'
-                )}
+            {/* URL Bar strip */}
+            <div className="flex items-center gap-2 bg-muted/60 border border-border/60 rounded-xl px-4 py-2">
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="text-xs font-mono text-muted-foreground truncate">{liveStorefrontUrl}</span>
+              </div>
+              <a
+                href={liveStorefrontUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 text-xs font-semibold text-primary hover:underline whitespace-nowrap"
               >
-                {/* Storefront Simulated Nav Header */}
-                <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-card">
-                  <div className="flex items-center gap-2">
-                    <div
-                      style={{ backgroundColor: primaryColor }}
-                      className="h-7 w-7 rounded-lg flex items-center justify-center text-white font-black text-xs shadow-xs"
-                    >
-                      {businessName.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="font-bold text-sm tracking-tight text-foreground font-header">
-                      {businessName}
-                    </span>
-                  </div>
+                Open in Tab ↗
+              </a>
+            </div>
 
-                  <div className="flex items-center gap-4 text-xs font-semibold text-muted-foreground">
-                    <span className="hidden sm:inline">Shop</span>
-                    <span className="hidden sm:inline">About</span>
-                    <div className="flex items-center gap-1 bg-muted px-2.5 py-1 rounded-full text-foreground text-[11px] font-bold">
-                      <ShoppingBag className="h-3.5 w-3.5 text-primary" /> Cart (0)
-                    </div>
+            {/* Browser chrome + iframe */}
+            <div className={clsx(
+              'flex justify-center transition-all duration-300',
+              previewDevice === 'mobile' ? 'px-8 md:px-32 lg:px-56' : ''
+            )}>
+              <div className="w-full rounded-2xl overflow-hidden border border-border/70 shadow-2xl bg-neutral-950">
+                {/* Fake browser chrome */}
+                <div className="flex items-center gap-1.5 px-4 py-2.5 bg-neutral-900 border-b border-white/5">
+                  <div className="h-2.5 w-2.5 rounded-full bg-red-500/70" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/70" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
+                  <div className="mx-auto flex-1 max-w-sm bg-neutral-800 rounded-md px-3 py-1 text-[10px] font-mono text-neutral-400 truncate text-center">
+                    {liveStorefrontUrl}
                   </div>
                 </div>
 
-                {/* Storefront Simulated Hero */}
-                <div className="p-6 md:p-12 space-y-4 text-center bg-gradient-to-b from-card to-background border-b border-border/40">
-                  {aiContent?.hero.badge && (
-                    <div className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
-                      {aiContent.hero.badge}
-                    </div>
-                  )}
-
-                  <h2 className="text-2xl md:text-4xl font-extrabold font-header text-foreground tracking-tight max-w-2xl mx-auto">
-                    {aiContent?.hero.headline || businessName}
-                  </h2>
-
-                  <p className="text-xs md:text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
-                    {aiContent?.hero.subheadline || tagline}
-                  </p>
-
-                  <div className="flex items-center justify-center gap-3 pt-2">
-                    <Button
-                      style={{ backgroundColor: primaryColor }}
-                      className="text-white text-xs font-bold h-10 px-6 rounded-xl shadow-md"
-                    >
-                      {aiContent?.hero.cta_text || 'Shop Collection'}
-                    </Button>
-                    {aiContent?.hero.secondary_cta_text && (
-                      <Button variant="outline" className="text-xs font-semibold h-10 px-4 rounded-xl border-border">
-                        {aiContent.hero.secondary_cta_text}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Features Row */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-6 bg-card border-b border-border/40 text-center">
-                  {(aiContent?.features || []).map((feat, idx) => (
-                    <div key={idx} className="p-2 space-y-1">
-                      <p className="text-xs font-bold text-foreground">{feat.title}</p>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">{feat.description}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Sample Catalog Products */}
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold font-header text-foreground">Featured Products</h4>
-                    <span className="text-xs text-primary font-semibold hover:underline cursor-pointer">View All</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    {[1, 2, 3].map((item) => (
-                      <div key={item} className="bg-card border border-border rounded-xl p-3 space-y-2">
-                        <div className="h-28 bg-muted/60 rounded-lg flex items-center justify-center text-muted-foreground/40 font-mono text-xs">
-                          Product Image
-                        </div>
-                        <p className="text-xs font-bold text-foreground truncate">Sample Product {item}</p>
-                        <p className="text-xs font-extrabold text-foreground">GHS {(item * 150).toFixed(2)}</p>
-                      </div>
-                    ))}
-                  </div>
+                {/* Real iframe */}
+                <div className={clsx(
+                  'w-full relative bg-white',
+                  previewDevice === 'mobile' ? 'h-[640px]' : 'h-[580px]'
+                )}>
+                  <iframe
+                    key={liveStorefrontUrl}
+                    src={liveStorefrontUrl}
+                    title={`${businessName} Live Preview`}
+                    className="w-full h-full border-0"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    loading="lazy"
+                  />
+                  {/* Overlay touch blocker so clicking inside doesn't navigate away */}
+                  <div
+                    className="absolute inset-0 z-10 cursor-default"
+                    title="Preview only — interactions are disabled in the wizard"
+                  />
                 </div>
               </div>
+            </div>
+
+            {/* Info strip */}
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+              <div className="h-5 w-5 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-blue-400 text-[10px] font-black">i</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                This is your <span className="font-semibold text-foreground">{activeTemplate.name}</span> theme rendering live with tenant{' '}
+                <span className="font-semibold text-foreground">@{selectedTenant?.slug || 'my-store'}</span>'s data.
+                Products, branding, and AI-generated copy will populate once the storefront is provisioned in the next step.
+              </p>
             </div>
 
             <div className="flex justify-between pt-4 border-t border-border/60">
@@ -945,9 +923,10 @@ export default function GenerateStorefront() {
                   </p>
                 </div>
 
+                {/* Production URL */}
                 <div className="p-4 bg-muted/40 border border-border/80 rounded-2xl max-w-lg mx-auto flex items-center justify-between gap-3">
                   <div className="text-left min-w-0 flex-1">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Subdomain URL</p>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">🌐 Production URL</p>
                     <a
                       href={deployedResult.storefront_url}
                       target="_blank"
@@ -969,6 +948,42 @@ export default function GenerateStorefront() {
                   </Button>
                 </div>
 
+                {/* Local dev test links */}
+                <div className="p-4 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/30 rounded-2xl max-w-lg mx-auto text-left space-y-3">
+                  <p className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-400 tracking-wider">🔧 Local Dev Testing (port 5175)</p>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <code className="text-[11px] font-mono text-amber-800 dark:text-amber-300 truncate">
+                        {`http://localhost:5175/?tenant=${selectedTenant?.slug}`}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(`http://localhost:5175/?tenant=${selectedTenant?.slug}`, '_blank')}
+                        className="h-7 px-2 rounded-lg text-[10px] font-semibold gap-1 shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100"
+                      >
+                        <ExternalLink className="h-3 w-3" /> Open
+                      </Button>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <code className="text-[11px] font-mono text-amber-800 dark:text-amber-300 truncate">
+                        {`http://${selectedTenant?.slug}.localhost:5175`}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(`http://${selectedTenant?.slug}.localhost:5175`, '_blank')}
+                        className="h-7 px-2 rounded-lg text-[10px] font-semibold gap-1 shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100"
+                      >
+                        <ExternalLink className="h-3 w-3" /> Open
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-500">
+                    Subdomain URL works in Chrome & Edge only (RFC 6761). Query param works in all browsers.
+                  </p>
+                </div>
+
                 <div className="flex items-center justify-center gap-3 pt-4">
                   <Button
                     variant="outline"
@@ -981,7 +996,7 @@ export default function GenerateStorefront() {
                     onClick={() => window.open(deployedResult.storefront_url, '_blank')}
                     className="rounded-xl text-xs font-bold h-10 px-6 gap-2"
                   >
-                    <ExternalLink className="h-4 w-4" /> Open Storefront
+                    <ExternalLink className="h-4 w-4" /> Open Production Store
                   </Button>
                 </div>
               </div>
