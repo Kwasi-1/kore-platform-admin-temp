@@ -29,6 +29,8 @@ export interface Tenant {
   api_key_prefix?: string;
   monthly_revenue?: number;
   transaction_count?: number;
+  active_addons?: string[];
+  has_ecommerce?: boolean;
 }
 
 export const getPlatformSummary = async (startDate: string, endDate: string) => {
@@ -158,6 +160,7 @@ export interface TenantDetailResponse {
     is_active: boolean;
     last_login?: string;
   }[];
+  addons?: TenantAddon[];
 }
 
 export const getPlatformTenantDetail = async (id: string) => {
@@ -462,3 +465,33 @@ export const generateAndDeployStorefront = async (payload: GenerateStorefrontPay
     message: string;
   };
 };
+
+export interface TenantAddon {
+  id: string;
+  tenant_id: string;
+  addon_key: string;
+  status: 'active' | 'trial' | 'cancelled' | 'expired';
+  billing_cycle: 'monthly' | 'yearly' | 'complimentary';
+  price?: number | null;
+  date_activated?: string;
+  expires_at?: string | null;
+}
+
+export const getTenantAddons = async (tenantId: string): Promise<TenantAddon[]> => {
+  const { data } = await apiClient.get<any>(`/api/v1/platform/tenants/${tenantId}/addons`);
+  return data?.success?.data?.addons || [];
+};
+
+export const attachTenantAddon = async (
+  tenantId: string,
+  payload: { addon_key: string; billing_cycle?: string; price?: number; status?: string }
+) => {
+  const { data } = await apiClient.post<any>(`/api/v1/platform/tenants/${tenantId}/addons`, payload);
+  return data?.success?.data;
+};
+
+export const detachTenantAddon = async (tenantId: string, addonKey: string) => {
+  const { data } = await apiClient.delete<any>(`/api/v1/platform/tenants/${tenantId}/addons/${addonKey}`);
+  return data?.success?.data;
+};
+

@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/shared/ProtectedRoute';
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 
 // Layouts (not lazy — tiny files, always needed)
 import AuthLayout from '@/layouts/AuthLayout';
@@ -80,8 +81,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <Suspense fallback={<PageLoader />}>
-      <AppRoutes />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <AppRoutes />
+      </Suspense>
+    </ErrorBoundary>
   );
 }

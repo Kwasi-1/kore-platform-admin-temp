@@ -6,7 +6,8 @@ import {
   Tenant, 
   previewAIStorefrontContent, 
   generateAndDeployStorefront, 
-  GeneratedStorefrontContent 
+  GeneratedStorefrontContent,
+  attachTenantAddon
 } from '@/api/platform';
 import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ import {
   CheckCircle2, 
   Check, 
   Globe, 
+  AlertCircle,
   Palette, 
   Layers, 
   Search, 
@@ -145,6 +147,36 @@ export default function GenerateStorefront() {
   const selectedTenant = useMemo(() => {
     return tenants.find((t) => t.id === selectedTenantId);
   }, [tenants, selectedTenantId]);
+
+  const [isAttachingAddon, setIsAttachingAddon] = useState<boolean>(false);
+
+  const hasEcommerceModule = useMemo(() => {
+    if (!selectedTenant) return true;
+    const plan = selectedTenant.plan?.toLowerCase();
+    if (plan === 'business' || plan === 'ecom_only' || plan === 'ecommerce_only' || plan === 'full_suite') return true;
+    if (selectedTenant.has_ecommerce) return true;
+    if (selectedTenant.active_addons && selectedTenant.active_addons.includes('ecommerce')) return true;
+    return false;
+  }, [selectedTenant]);
+
+  const handleAttachEcommerceAddon = async () => {
+    if (!selectedTenant) return;
+    setIsAttachingAddon(true);
+    try {
+      await attachTenantAddon(selectedTenant.id, {
+        addon_key: 'ecommerce',
+        billing_cycle: 'complimentary',
+        price: 0,
+        status: 'active',
+      });
+      toast.success(`Ecommerce Add-On attached to ${selectedTenant.business_name}!`);
+      queryClient.invalidateQueries({ queryKey: ['platform-tenants-list'] });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error?.message || 'Failed to attach add-on');
+    } finally {
+      setIsAttachingAddon(false);
+    }
+  };
 
   const activeTemplate = useMemo(() => {
     return TEMPLATES.find((t) => t.id === selectedTemplateId) || TEMPLATES[0];
@@ -365,6 +397,36 @@ export default function GenerateStorefront() {
                     <Badge variant={selectedTenant.is_active ? 'default' : 'secondary'} className="capitalize text-[10px]">
                       {selectedTenant.is_active ? 'Active' : 'Suspended'}
                     </Badge>
+                  </div>
+                )}
+                {selectedTenant && !hasEcommerceModule && (
+                  <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2.5">
+                    <div className="flex items-start gap-2.5">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                          Ecommerce module not included in {selectedTenant.plan?.toUpperCase()} Plan
+                        </p>
+                        <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                          This merchant is on the {selectedTenant.plan} tier without online storefront access. You can attach the Ecommerce Add-On below, or continue in Draft mode (merchant can subscribe before publishing live).
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-500/20">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={isAttachingAddon}
+                        onClick={handleAttachEcommerceAddon}
+                        className="h-7 px-3 text-[11px] font-semibold bg-amber-600 hover:bg-amber-700 text-white gap-1.5 rounded-lg"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        {isAttachingAddon ? "Attaching Add-On..." : "Attach Ecommerce Add-On (Complimentary)"}
+                      </Button>
+                      <span className="text-[10px] text-muted-foreground">
+                        or proceed — generated storefront will start as Unpublished
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>

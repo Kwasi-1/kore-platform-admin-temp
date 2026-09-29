@@ -4,7 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   getPlatformTenantDetail, 
   rotateTenantApiKey, 
-  TenantDetailResponse 
+  TenantDetailResponse,
+  attachTenantAddon,
+  detachTenantAddon,
+  TenantAddon
 } from '@/api/platform';
 import { useCurrency } from '@/hooks/useCurrency';
 import { formatShortDate, formatDateTime } from '@/utils/date';
@@ -58,6 +61,7 @@ export default function TenantDetail() {
 
   // Generated Key Reveal
   const [newApiKey, setNewApiKey] = useState('');
+  const [isTogglingAddon, setIsTogglingAddon] = useState(false);
 
   // Fetch tenant details
   const { data: serverDetailData, isLoading, error } = useQuery({
@@ -84,21 +88,73 @@ export default function TenantDetail() {
     setIsRotateConfirmOpen(false);
   };
 
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={() => navigate('/tenants')}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-semibold transition-colors w-fit"
+        >
+          <ChevronLeft className="h-4 w-4" /> Back to Tenants
+        </button>
+        <div className="bg-card border border-destructive/30 rounded-xl p-12 flex flex-col items-center justify-center min-h-[360px] gap-3 text-center">
+          <ShieldAlert className="h-10 w-10 text-destructive" />
+          <h3 className="text-base font-bold text-foreground">Failed to load tenant details</h3>
+          <p className="text-xs text-muted-foreground max-w-md">
+            {(error as any)?.response?.data?.error?.message || (error as any)?.message || 'Merchant profile could not be retrieved from the server.'}
+          </p>
+          <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ['platform_tenant_detail', id] })}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1" /> Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading || !serverDetailData) {
     return (
-      <PageLayout
-        title="Tenant Overview"
-        subtitle="Loading merchant details..."
-      >
+      <div className="space-y-6">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
+          <ChevronLeft className="h-4 w-4" /> Back to Tenants
+        </div>
         <div className="bg-card border border-border rounded-xl p-12 flex flex-col items-center justify-center min-h-[360px] gap-3">
           <Spinner className="py-2" />
           <p className="text-xs text-muted-foreground font-medium">Fetching merchant profile & telemetry data...</p>
         </div>
-      </PageLayout>
+      </div>
     );
   }
 
   const { tenant, metrics, owner, recent_transactions, storefront_deployment, staff } = serverDetailData;
+  const addonsList = (serverDetailData.addons || []) as TenantAddon[];
+  const isIncludedInPlan = ['business', 'ecom_only', 'ecommerce_only', 'full_suite'].includes(
+    (tenant?.plan || '').toLowerCase()
+  );
+  const hasEcommerce = isIncludedInPlan || Boolean(tenant?.has_ecommerce) || addonsList.some((a) => a.addon_key === 'ecommerce' && a.status === 'active');
+
+  const handleToggleEcommerceAddon = async () => {
+    if (!id || !tenant) return;
+    setIsTogglingAddon(true);
+    try {
+      if (hasEcommerce && !isIncludedInPlan) {
+        await detachTenantAddon(id, 'ecommerce');
+        toast.success(`Ecommerce Add-on removed from ${tenant.business_name}`);
+      } else {
+        await attachTenantAddon(id, {
+          addon_key: 'ecommerce',
+          billing_cycle: 'complimentary',
+          price: 0,
+          status: 'active',
+        });
+        toast.success(`Ecommerce Add-on activated for ${tenant.business_name}`);
+      }
+      queryClient.invalidateQueries({ queryKey: ['platform_tenant_detail', id] });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error?.message || 'Failed to update add-on');
+    } finally {
+      setIsTogglingAddon(false);
+    }
+  };
 
   return (
 
@@ -306,6 +362,72 @@ export default function TenantDetail() {
                 <span className="text-muted-foreground">Phone Number:</span>
                 <span className="font-semibold text-foreground">{owner.phone || 'N/A'}</span>
               </div>
+            </div>
+          </div>
+
+          {/* Add-ons & Modules Card */}
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
+                Add-ons & Modules
+              </h3>
+              <Badge variant="outline" className="text-[10px]">
+                {addonsList.filter((a) => a.status === 'active').length} Active
+              </Badge>
+            </div>
+
+            <div className="space-y-3">
+              {/* Ecommerce Add-on Row */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/60">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-foreground">Ecommerce Storefront</span>
+                    {hasEcommerce ? (
+                      <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[9px] px-1.5 py-0">
+                        {isIncludedInPlan ? 'Included in Plan' : 'Add-on Active'}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                        Not Enabled
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Online storefront, Paystack checkout & web orders
+                  </p>
+                </div>
+
+                {!isIncludedInPlan && (
+                  <Button
+                    size="sm"
+                    variant={hasEcommerce ? 'outline' : 'default'}
+                    disabled={isTogglingAddon}
+                    onClick={handleToggleEcommerceAddon}
+                    className={`h-7 px-2.5 text-[11px] font-semibold ${
+                      hasEcommerce
+                        ? 'text-rose-600 border-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/20'
+                        : 'bg-primary text-primary-foreground'
+                    }`}
+                  >
+                    {hasEcommerce ? 'Cancel Add-on' : 'Attach Add-on'}
+                  </Button>
+                )}
+              </div>
+
+              {/* Other add-ons if any */}
+              {addonsList
+                .filter((a) => a.addon_key !== 'ecommerce')
+                .map((addon) => (
+                  <div key={addon.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20 border border-border/40 text-xs">
+                    <div>
+                      <span className="font-semibold capitalize">{addon.addon_key.replace('_', ' ')}</span>
+                      <span className="text-[10px] text-muted-foreground ml-2">({addon.billing_cycle})</span>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] text-emerald-600">
+                      {addon.status}
+                    </Badge>
+                  </div>
+                ))}
             </div>
           </div>
 
