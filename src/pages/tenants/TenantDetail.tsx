@@ -62,6 +62,23 @@ export default function TenantDetail() {
   // Generated Key Reveal
   const [newApiKey, setNewApiKey] = useState('');
   const [isTogglingAddon, setIsTogglingAddon] = useState(false);
+  const [addonConfirm, setAddonConfirm] = useState<{
+    isOpen: boolean;
+    type: 'attach' | 'detach';
+    addonKey: string;
+    title: string;
+    description: string;
+    isDanger: boolean;
+    confirmLabel: string;
+  }>({
+    isOpen: false,
+    type: 'attach',
+    addonKey: '',
+    title: '',
+    description: '',
+    isDanger: false,
+    confirmLabel: 'Confirm',
+  });
 
   // Fetch tenant details
   const { data: serverDetailData, isLoading, error } = useQuery({
@@ -132,23 +149,62 @@ export default function TenantDetail() {
   );
   const hasEcommerce = isIncludedInPlan || Boolean(tenant?.has_ecommerce) || addonsList.some((a) => a.addon_key === 'ecommerce' && a.status === 'active');
 
-  const handleToggleEcommerceAddon = async () => {
-    if (!id || !tenant) return;
+  const promptToggleEcommerceAddon = () => {
+    if (!tenant) return;
+    if (hasEcommerce && !isIncludedInPlan) {
+      setAddonConfirm({
+        isOpen: true,
+        type: 'detach',
+        addonKey: 'ecommerce',
+        title: `Cancel Ecommerce Add-on?`,
+        description: `This will immediately remove the Ecommerce module from ${tenant.business_name}. Their storefront deployment will no longer accept live checkout orders. Are you sure you want to proceed?`,
+        isDanger: true,
+        confirmLabel: 'Yes, Cancel Add-on',
+      });
+    } else {
+      setAddonConfirm({
+        isOpen: true,
+        type: 'attach',
+        addonKey: 'ecommerce',
+        title: `Activate Ecommerce Add-on?`,
+        description: `This will grant ${tenant.business_name} full access to online storefront generation, Paystack checkout, and ecommerce order management on their ${getPlanConfig(tenant.plan).label} plan.`,
+        isDanger: false,
+        confirmLabel: 'Activate Add-on',
+      });
+    }
+  };
+
+  const promptDetachOtherAddon = (addonKey: string, formattedName: string) => {
+    if (!tenant) return;
+    setAddonConfirm({
+      isOpen: true,
+      type: 'detach',
+      addonKey,
+      title: `Remove ${formattedName} Add-on?`,
+      description: `Are you sure you want to revoke the ${formattedName} module for ${tenant.business_name}? Features associated with this add-on will be immediately disabled.`,
+      isDanger: true,
+      confirmLabel: 'Remove Add-on',
+    });
+  };
+
+  const handleConfirmAddonAction = async () => {
+    if (!id || !tenant || !addonConfirm.addonKey) return;
     setIsTogglingAddon(true);
     try {
-      if (hasEcommerce && !isIncludedInPlan) {
-        await detachTenantAddon(id, 'ecommerce');
-        toast.success(`Ecommerce Add-on removed from ${tenant.business_name}`);
+      if (addonConfirm.type === 'detach') {
+        await detachTenantAddon(id, addonConfirm.addonKey);
+        toast.success(`Add-on '${addonConfirm.addonKey}' removed from ${tenant.business_name}`);
       } else {
         await attachTenantAddon(id, {
-          addon_key: 'ecommerce',
+          addon_key: addonConfirm.addonKey,
           billing_cycle: 'complimentary',
           price: 0,
           status: 'active',
         });
-        toast.success(`Ecommerce Add-on activated for ${tenant.business_name}`);
+        toast.success(`Add-on '${addonConfirm.addonKey}' activated for ${tenant.business_name}`);
       }
       queryClient.invalidateQueries({ queryKey: ['platform_tenant_detail', id] });
+      setAddonConfirm((prev) => ({ ...prev, isOpen: false }));
     } catch (err: any) {
       toast.error(err?.response?.data?.error?.message || 'Failed to update add-on');
     } finally {
@@ -402,7 +458,7 @@ export default function TenantDetail() {
                     size="sm"
                     variant={hasEcommerce ? 'outline' : 'default'}
                     disabled={isTogglingAddon}
-                    onClick={handleToggleEcommerceAddon}
+                    onClick={promptToggleEcommerceAddon}
                     className={`h-7 px-2.5 text-[11px] font-semibold ${
                       hasEcommerce
                         ? 'text-rose-600 border-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/20'
@@ -423,9 +479,20 @@ export default function TenantDetail() {
                       <span className="font-semibold capitalize">{addon.addon_key.replace('_', ' ')}</span>
                       <span className="text-[10px] text-muted-foreground ml-2">({addon.billing_cycle})</span>
                     </div>
-                    <Badge variant="outline" className="text-[10px] text-emerald-600">
-                      {addon.status}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px] text-emerald-600">
+                        {addon.status}
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => promptDetachOtherAddon(addon.addon_key, addon.addon_key.replace('_', ' '))}
+                        disabled={isTogglingAddon}
+                        className="h-6 px-2 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                      >
+                        Remove
+                      </Button>
+                    </div>
                   </div>
                 ))}
             </div>
@@ -575,6 +642,18 @@ export default function TenantDetail() {
         confirmLabel="Rotate Key"
         isDanger={true}
         isLoading={rotateKeyMutation.isPending}
+      />
+
+      {/* Add-on Action Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={addonConfirm.isOpen}
+        onClose={() => setAddonConfirm((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmAddonAction}
+        title={addonConfirm.title}
+        description={addonConfirm.description}
+        confirmLabel={addonConfirm.confirmLabel}
+        isDanger={addonConfirm.isDanger}
+        isLoading={isTogglingAddon}
       />
 
       {/* Key Reveal Modal */}

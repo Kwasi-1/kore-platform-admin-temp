@@ -46,6 +46,7 @@ import {
   Tag
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import clsx from 'clsx';
 
 const INDUSTRIES = [
@@ -149,6 +150,7 @@ export default function GenerateStorefront() {
   }, [tenants, selectedTenantId]);
 
   const [isAttachingAddon, setIsAttachingAddon] = useState<boolean>(false);
+  const [isAttachConfirmOpen, setIsAttachConfirmOpen] = useState<boolean>(false);
 
   const hasEcommerceModule = useMemo(() => {
     if (!selectedTenant) return true;
@@ -417,7 +419,7 @@ export default function GenerateStorefront() {
                         type="button"
                         size="sm"
                         disabled={isAttachingAddon}
-                        onClick={handleAttachEcommerceAddon}
+                        onClick={() => setIsAttachConfirmOpen(true)}
                         className="h-7 px-3 text-[11px] font-semibold bg-amber-600 hover:bg-amber-700 text-white gap-1.5 rounded-lg"
                       >
                         <Sparkles className="w-3.5 h-3.5" />
@@ -1167,6 +1169,20 @@ export default function GenerateStorefront() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={isAttachConfirmOpen}
+        onClose={() => setIsAttachConfirmOpen(false)}
+        onConfirm={async () => {
+          setIsAttachConfirmOpen(false);
+          await handleAttachEcommerceAddon();
+        }}
+        title={`Attach Ecommerce Add-On?`}
+        description={`This will attach the complimentary Ecommerce Add-on to ${selectedTenant?.business_name || 'this tenant'} (${selectedTenant?.plan || ''} plan), granting access to headless storefront creation and Paystack checkout.`}
+        confirmLabel="Attach Add-on"
+        isDanger={false}
+        isLoading={isAttachingAddon}
+      />
     </PageLayout>
   );
 }

@@ -56,7 +56,7 @@ export default function ConfirmDialog({
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <div className="p-6 space-y-6">
+        <div className="space-y-6">
           <div className="flex gap-3 items-start">
             {isDanger && (
               <div className="h-10 w-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shrink-0">
@@ -90,7 +90,7 @@ export default function ConfirmDialog({
           )}
         </div>
 
-        <div className="border-t border-border px-6 py-4 flex justify-end gap-2">
+        <div className="border-t border-border mt-6 pt-4 flex justify-end gap-2">
           <Button
             variant="outline"
             onClick={onClose}
