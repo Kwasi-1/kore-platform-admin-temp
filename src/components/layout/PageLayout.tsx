@@ -80,20 +80,7 @@ const { adminUser, logout } = usePlatformAuthStore();
           <div className="flex items-center justify-between w-full min-h-[44px] gap-3">
             {/* Left side */}
             <div className="flex items-center gap-3 min-w-0">
-              {showBackButton && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    if (onBackClick) onBackClick();
-                    else if (backUrl) navigate(backUrl);
-                    else navigate(-1);
-                  }}
-                  className="h-8 w-8 md:h-9 md:w-9 rounded-full border bg-card shadow-sm hover:bg-muted text-foreground shrink-0"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              )}
+              
               <div className="flex flex-col gap-0.5 min-w-0">
                 <h1 className={cn("text-2xl md:text-2xl lg:text-[26px] font-bold text-foreground tracking-tighter font-header truncate", showBackButton ? "text-xl" : "text-2xl", titleClassName)}>
                   {title}
@@ -105,6 +92,21 @@ const { adminUser, logout } = usePlatformAuthStore();
                 )} */}
               </div>
             </div>
+
+            {showBackButton && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (onBackClick) onBackClick();
+                  else if (backUrl) navigate(backUrl);
+                  else navigate(-1);
+                }}
+                className="h-8 w-8 md:h-9 md:w-9 rounded-xl border bg-card shadow-sm hover:bg-muted text-foreground shrink-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
 
             {/* Right side: Actions (Desktop) + Profile Pill */}
             <div className={`items-center gap-3 shrink-0 self-start ${showBackButton ? "hidden" : "flex"}`}>

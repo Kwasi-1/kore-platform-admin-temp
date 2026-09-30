@@ -90,7 +90,7 @@ export default function ConfirmDialog({
           )}
         </div>
 
-        <div className="border-t border-border mt-6 pt-4 flex justify-end gap-2">
+        <div className="border-t border-border mt-6 pt-6 flex justify-end gap-2">
           <Button
             variant="outline"
             onClick={onClose}

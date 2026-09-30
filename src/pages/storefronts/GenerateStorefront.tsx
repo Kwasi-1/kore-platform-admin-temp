@@ -239,7 +239,7 @@ export default function GenerateStorefront() {
     mutationFn: (payload: any) => generateAndDeployStorefront(payload),
     onSuccess: (data) => {
       setDeployedResult(data);
-      setCurrentStep(5);
+      setCurrentStep(4);
       queryClient.invalidateQueries({ queryKey: ['platform-storefronts'] });
       toast.success('🎉 Storefront successfully provisioned and deployed!');
     },
@@ -271,9 +271,8 @@ export default function GenerateStorefront() {
   };
 
   // Step validation
-  const canProceedStep1 = selectedTenantId && businessName.trim();
-  const canProceedStep2 = !!selectedTemplateId;
-  const canProceedStep3 = !!aiContent;
+  const canProceedStep1 = Boolean(selectedTenantId && businessName.trim() && selectedTemplateId);
+  const canProceedStep2 = Boolean(aiContent);
 
   return (
     <PageLayout
@@ -290,17 +289,17 @@ export default function GenerateStorefront() {
           <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Back to Storefronts
         </Button>
       }
+      className='max-w-4xl mx-auto'
     >
-      <div className="max-w-5xl mx-auto space-y-8 pb-12">
+      <div className=" space-y-8 pb-12">
         {/* Step Progress Bar */}
         <div className="bg-card border border-border/80 rounded-2xl p-4 md:p-6 shadow-xs">
           <div className="flex items-center justify-between">
             {[
-              { num: 1, title: 'Brand & Tenant', icon: Store },
-              { num: 2, title: 'Template', icon: Layers },
-              { num: 3, title: 'AI Copy & SEO', icon: Sparkles },
-              { num: 4, title: 'Live Preview', icon: Monitor },
-              { num: 5, title: 'Launch', icon: CheckCircle2 },
+              { num: 1, title: 'Brand & Template', icon: Store },
+              { num: 2, title: 'AI Copy & SEO', icon: Sparkles },
+              { num: 3, title: 'Live Preview', icon: Monitor },
+              { num: 4, title: 'Launch', icon: CheckCircle2 },
             ].map((step, idx) => {
               const isCompleted = currentStep > step.num;
               const isCurrent = currentStep === step.num;
@@ -340,7 +339,7 @@ export default function GenerateStorefront() {
                     </div>
                   </div>
 
-                  {idx < 4 && (
+                  {idx < 3 && (
                     <div
                       className={clsx(
                         'flex-1 h-[2px] mx-2 md:mx-4 transition-colors',
@@ -360,9 +359,9 @@ export default function GenerateStorefront() {
         {currentStep === 1 && (
           <div className="bg-card border border-border/80 rounded-2xl p-6 md:p-8 space-y-6 shadow-xs">
             <div className="border-b border-border/60 pb-4">
-              <h3 className="text-lg font-bold font-header text-foreground">1. Tenant & Brand Identity</h3>
+              <h3 className="text-lg font-bold font-header text-foreground">1. Tenant & Storefront Template</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Select the business merchant and define their brand presence.
+                Select the merchant, pick their storefront architecture theme, and define their brand identity.
               </p>
             </div>
 
@@ -457,42 +456,110 @@ export default function GenerateStorefront() {
                 />
               </div>
 
-              {/* Industry Category */}
-              <div className="space-y-2 md:col-span-2">
-                <Label className="text-xs font-bold text-foreground">
-                  Store Industry / Niche <span className="text-rose-500">*</span>
-                </Label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-                  {INDUSTRIES.map((ind) => {
-                    const isSelected = industry === ind.id;
-                    const Icon = ind.icon;
+              {/* Template Selection */}
+              <div className="space-y-3 md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-xs font-bold text-foreground">
+                      Storefront Starter Template <span className="text-rose-500">*</span>
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Select the architectural frontend layout best optimized for this brand.
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] font-mono">
+                    {TEMPLATES.length} Live Themes Available
+                  </Badge>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2 pt-1">
+                  {TEMPLATES.map((tmpl) => {
+                    const isSelected = selectedTemplateId === tmpl.id;
                     return (
                       <div
-                        key={ind.id}
-                        onClick={() => {
-                          setIndustry(ind.id);
-                          setSelectedTemplateId(ind.defaultTemplate);
-                          setPrimaryColor(ind.color);
-                        }}
+                        key={tmpl.id}
+                        onClick={() => setSelectedTemplateId(tmpl.id)}
                         className={clsx(
-                          'p-3 rounded-xl border flex flex-col items-center gap-2 cursor-pointer transition-all text-center',
+                          'rounded-2xl border p-5 flex flex-col justify-between gap-4 cursor-pointer transition-all relative overflow-hidden',
                           isSelected
-                            ? 'bg-primary/10 border-primary shadow-xs ring-2 ring-primary/20 text-primary'
-                            : 'bg-card border-border/70 hover:border-foreground/30 text-muted-foreground'
+                            ? 'border-primary ring-2 ring-primary/20 bg-primary/5 shadow-md'
+                            : 'border-border/70 hover:border-foreground/30 bg-card'
                         )}
                       >
-                        <div
-                          className={clsx(
-                            'h-8 w-8 rounded-lg flex items-center justify-center',
-                            isSelected ? 'bg-primary text-white' : 'bg-muted'
-                          )}
-                        >
-                          <Icon className="h-4 w-4" />
+                        {/* Header & Badges */}
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                                {tmpl.badge}
+                              </Badge>
+                              <h4 className="text-base font-bold font-header text-foreground">{tmpl.name}</h4>
+                              <p className="text-xs font-medium text-primary">{tmpl.tagline}</p>
+                            </div>
+
+                            <div
+                              className={clsx(
+                                'h-6 w-6 rounded-full flex items-center justify-center border transition-all shrink-0',
+                                isSelected ? 'bg-primary text-white border-primary' : 'border-border bg-muted/40'
+                              )}
+                            >
+                              {isSelected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-muted-foreground leading-relaxed">{tmpl.description}</p>
                         </div>
-                        <span className="text-xs font-bold">{ind.label}</span>
+
+                        {/* Features highlights */}
+                        <div className="space-y-1.5 pt-3 border-t border-border/40">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/80">Key Capabilities</p>
+                          <ul className="space-y-1 text-[11px] text-muted-foreground">
+                            {tmpl.features.slice(0, 3).map((f, i) => (
+                              <li key={i} className="flex items-center gap-1.5">
+                                <CheckCircle className="h-3 w-3 text-emerald-500 shrink-0" />
+                                <span className="truncate">{f}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Industry / Niche Context for AI */}
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-xs font-bold text-foreground">
+                  Store Industry / Niche <span className="text-[10px] text-muted-foreground font-normal">(Provides domain context for Gemini AI brand copy)</span>
+                </Label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <select
+                    value={industry}
+                    onChange={(e) => {
+                      setIndustry(e.target.value);
+                      const matched = INDUSTRIES.find(i => i.id === e.target.value);
+                      if (matched?.color) {
+                        setPrimaryColor(matched.color);
+                      }
+                    }}
+                    className="w-full h-10 px-3 rounded-xl bg-background border border-border text-xs font-semibold text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                  >
+                    {INDUSTRIES.map((ind) => (
+                      <option key={ind.id} value={ind.id}>
+                        {ind.label}
+                      </option>
+                    ))}
+                    <option value="Custom / Other">Custom / Other</option>
+                  </select>
+
+                  {industry === 'Custom / Other' && (
+                    <Input
+                      placeholder="Specify custom industry (e.g. Artisanal Furniture)"
+                      onChange={(e) => setIndustry(e.target.value)}
+                      className="rounded-xl h-10 text-xs font-medium"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -543,124 +610,29 @@ export default function GenerateStorefront() {
             <div className="flex justify-end pt-4 border-t border-border/60">
               <Button
                 disabled={!canProceedStep1}
-                onClick={() => setCurrentStep(2)}
-                className="rounded-xl text-xs font-bold h-10 px-5 gap-2"
-              >
-                Continue to Template <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* STEP 2: Template Selection                                                */}
-        {/* ========================================================================= */}
-        {currentStep === 2 && (
-          <div className="bg-card border border-border/80 rounded-2xl p-6 md:p-8 space-y-6 shadow-xs">
-            <div className="border-b border-border/60 pb-4">
-              <h3 className="text-lg font-bold font-header text-foreground">2. Select Storefront Starter Template</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Choose the architectural frontend theme best optimized for {businessName}.
-              </p>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              {TEMPLATES.map((tmpl) => {
-                const isSelected = selectedTemplateId === tmpl.id;
-
-                return (
-                  <div
-                    key={tmpl.id}
-                    onClick={() => setSelectedTemplateId(tmpl.id)}
-                    className={clsx(
-                      'rounded-2xl border p-6 flex flex-col justify-between gap-5 cursor-pointer transition-all relative overflow-hidden',
-                      isSelected
-                        ? 'border-primary ring-2 ring-primary/20 bg-primary/5 shadow-md'
-                        : 'border-border/70 hover:border-foreground/30 bg-card'
-                    )}
-                  >
-                    {/* Header */}
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider mb-2">
-                            {tmpl.badge}
-                          </Badge>
-                          <h4 className="text-lg font-bold font-header text-foreground">{tmpl.name}</h4>
-                          <p className="text-xs font-medium text-primary mt-0.5">{tmpl.tagline}</p>
-                        </div>
-
-                        <div
-                          className={clsx(
-                            'h-6 w-6 rounded-full flex items-center justify-center border transition-all',
-                            isSelected ? 'bg-primary text-white border-primary' : 'border-border bg-muted/40'
-                          )}
-                        >
-                          {isSelected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-muted-foreground leading-relaxed">{tmpl.description}</p>
-                    </div>
-
-                    {/* Features Checklist */}
-                    <div className="space-y-2 pt-3 border-t border-border/40">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-foreground/80">Key Capabilities</p>
-                      <ul className="space-y-1.5 text-xs text-muted-foreground">
-                        {tmpl.features.map((f, i) => (
-                          <li key={i} className="flex items-center gap-2">
-                            <CheckCircle className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                            <span>{f}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* Live Tech Badges */}
-                    <div className="flex items-center gap-2 pt-2 text-[10px] text-muted-foreground font-mono">
-                      <span className="bg-muted px-2 py-0.5 rounded">React 18</span>
-                      <span className="bg-muted px-2 py-0.5 rounded">Vite</span>
-                      <span className="bg-muted px-2 py-0.5 rounded">TailwindCSS</span>
-                      <span className="bg-muted px-2 py-0.5 rounded">Paystack Ready</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex justify-between pt-4 border-t border-border/60">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentStep(1)}
-                className="rounded-xl text-xs font-semibold h-10 px-4 gap-2 border-border"
-              >
-                <ArrowLeft className="h-4 w-4" /> Back
-              </Button>
-              <Button
-                disabled={!canProceedStep2}
                 onClick={() => {
-                  setCurrentStep(3);
+                  setCurrentStep(2);
                   if (!aiContent) {
                     handleGenerateAI();
                   }
                 }}
                 className="rounded-xl text-xs font-bold h-10 px-5 gap-2"
               >
-                Generate AI Brand Copy <Sparkles className="h-4 w-4" />
+                Continue to AI Brand Copy <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 3: AI Copy & SEO Review                                              */}
+        {/* STEP 2: AI Copy & SEO Review                                              */}
         {/* ========================================================================= */}
-        {currentStep === 3 && (
+        {currentStep === 2 && (
           <div className="bg-card border border-border/80 rounded-2xl p-6 md:p-8 space-y-6 shadow-xs">
             <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-4">
               <div>
                 <h3 className="text-lg font-bold font-header text-foreground flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary animate-pulse" /> 3. AI Content & SEO Customizer
+                  <Sparkles className="h-5 w-5 text-primary animate-pulse" /> 2. AI Content & SEO Customizer
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Review and fine-tune Gemini-generated headlines, story narrative, and Google search metadata.
@@ -840,14 +812,14 @@ export default function GenerateStorefront() {
             <div className="flex justify-between pt-4 border-t border-border/60">
               <Button
                 variant="outline"
-                onClick={() => setCurrentStep(2)}
+                onClick={() => setCurrentStep(1)}
                 className="rounded-xl text-xs font-semibold h-10 px-4 gap-2 border-border"
               >
-                <ArrowLeft className="h-4 w-4" /> Back
+                <ArrowLeft className="h-4 w-4" /> Back to Brand & Template
               </Button>
               <Button
-                disabled={!canProceedStep3}
-                onClick={() => setCurrentStep(4)}
+                disabled={!canProceedStep2}
+                onClick={() => setCurrentStep(3)}
                 className="rounded-xl text-xs font-bold h-10 px-5 gap-2"
               >
                 View Live Preview <Monitor className="h-4 w-4" />
@@ -857,36 +829,58 @@ export default function GenerateStorefront() {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 4: Live Storefront Preview (Real iframe)                             */}
+        {/* STEP 3: Live Storefront Preview (Real iframe)                             */}
         {/* ========================================================================= */}
-        {currentStep === 4 && (
+        {currentStep === 3 && (
           <div className="bg-card border border-border/80 rounded-2xl p-6 md:p-8 space-y-6 shadow-xs">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border/60 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
               <div>
-                <h3 className="text-lg font-bold font-header text-foreground">4. Live Storefront Preview</h3>
+                <h3 className="text-lg font-bold font-header text-foreground">3. Live Storefront Preview</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   You're viewing the <span className="font-semibold text-foreground">real, live</span> storefront — exactly what customers will see.
                 </p>
               </div>
 
-              <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border border-border/60">
-                <Button
-                  size="sm"
-                  variant={previewDevice === 'desktop' ? 'secondary' : 'ghost'}
-                  onClick={() => setPreviewDevice('desktop')}
-                  className="h-7 px-2.5 text-xs font-semibold rounded-lg"
-                >
-                  <Monitor className="h-3.5 w-3.5 mr-1" /> Desktop
-                </Button>
-                <Button
-                  size="sm"
-                  variant={previewDevice === 'mobile' ? 'secondary' : 'ghost'}
-                  onClick={() => setPreviewDevice('mobile')}
-                  className="h-7 px-2.5 text-xs font-semibold rounded-lg"
-                >
-                  <Smartphone className="h-3.5 w-3.5 mr-1" /> Mobile
-                </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Template switch toggle */}
+                <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border border-border/60">
+                  {TEMPLATES.map((tmpl) => (
+                    <Button
+                      key={tmpl.id}
+                      size="sm"
+                      variant={selectedTemplateId === tmpl.id ? 'secondary' : 'ghost'}
+                      onClick={() => setSelectedTemplateId(tmpl.id)}
+                      className={clsx(
+                        'h-7 px-2.5 text-xs font-semibold rounded-lg gap-1.5',
+                        selectedTemplateId === tmpl.id && 'shadow-xs font-bold text-primary'
+                      )}
+                    >
+                      <Layers className="h-3.5 w-3.5" />
+                      {tmpl.name}
+                    </Button>
+                  ))}
+                </div>
+
+                {/* Device switch toggle */}
+                <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border border-border/60">
+                  <Button
+                    size="sm"
+                    variant={previewDevice === 'desktop' ? 'secondary' : 'ghost'}
+                    onClick={() => setPreviewDevice('desktop')}
+                    className="h-7 px-2.5 text-xs font-semibold rounded-lg"
+                  >
+                    <Monitor className="h-3.5 w-3.5 mr-1" /> Desktop
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={previewDevice === 'mobile' ? 'secondary' : 'ghost'}
+                    onClick={() => setPreviewDevice('mobile')}
+                    className="h-7 px-2.5 text-xs font-semibold rounded-lg"
+                  >
+                    <Smartphone className="h-3.5 w-3.5 mr-1" /> Mobile
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -962,13 +956,13 @@ export default function GenerateStorefront() {
             <div className="flex justify-between pt-4 border-t border-border/60">
               <Button
                 variant="outline"
-                onClick={() => setCurrentStep(3)}
+                onClick={() => setCurrentStep(2)}
                 className="rounded-xl text-xs font-semibold h-10 px-4 gap-2 border-border"
               >
                 <ArrowLeft className="h-4 w-4" /> Back to Copy
               </Button>
               <Button
-                onClick={() => setCurrentStep(5)}
+                onClick={() => setCurrentStep(4)}
                 className="rounded-xl text-xs font-bold h-10 px-5 gap-2"
               >
                 Configure Subdomain & Launch <ArrowRight className="h-4 w-4" />
@@ -978,9 +972,9 @@ export default function GenerateStorefront() {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 5: Provision & Deploy                                                */}
+        {/* STEP 4: Provision & Deploy                                                */}
         {/* ========================================================================= */}
-        {currentStep === 5 && (
+        {currentStep === 4 && (
           <div className="bg-card border border-border/80 rounded-2xl p-6 md:p-8 space-y-6 shadow-xs">
             {deployedResult ? (
               /* Success Deployment Card */
@@ -1079,7 +1073,7 @@ export default function GenerateStorefront() {
               /* Pre-Deploy Form */
               <div className="space-y-6">
                 <div className="border-b border-border/60 pb-4">
-                  <h3 className="text-lg font-bold font-header text-foreground">5. Provision Subdomain & Final Launch</h3>
+                  <h3 className="text-lg font-bold font-header text-foreground">4. Provision Subdomain & Final Launch</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Assign the deployment address and link it to {selectedTenant?.business_name}.
                   </p>
@@ -1143,7 +1137,7 @@ export default function GenerateStorefront() {
                 <div className="flex justify-between pt-4 border-t border-border/60">
                   <Button
                     variant="outline"
-                    onClick={() => setCurrentStep(4)}
+                    onClick={() => setCurrentStep(3)}
                     className="rounded-xl text-xs font-semibold h-10 px-4 gap-2 border-border"
                   >
                     <ArrowLeft className="h-4 w-4" /> Back to Preview
