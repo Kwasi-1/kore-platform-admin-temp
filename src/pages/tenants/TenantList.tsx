@@ -103,7 +103,7 @@ export default function TenantList() {
       cell: ({ row }) => {
         const tenant = row.original;
         return (
-          <span className="font-bold text-foreground group-hover:text-primary transition-colors">
+          <span className="font-bold text-foreground transition-colors">
             {tenant.business_name}
           </span>
         );

@@ -107,7 +107,7 @@ export default function TenantDetail() {
 
   if (error) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 md:px-3">
         <button
           onClick={() => navigate('/tenants')}
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-semibold transition-colors w-fit"
@@ -130,7 +130,7 @@ export default function TenantDetail() {
 
   if (isLoading || !serverDetailData) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 md:px-3">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
           <ChevronLeft className="h-4 w-4" /> Back to Tenants
         </div>
@@ -214,7 +214,7 @@ export default function TenantDetail() {
 
   return (
 
-    <div className="space-y-6">
+    <div className="space-y-6 md:px-3">
       {/* Back Header & Title Row */}
       <div className="flex flex-col gap-2">
         <button
