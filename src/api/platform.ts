@@ -133,6 +133,7 @@ export interface TenantDetailResponse {
     total_transactions: number;
     staff_count: number;
     monthly_revenue: number;
+    total_products?: number;
   };
   owner: {
     name: string;
@@ -163,9 +164,48 @@ export interface TenantDetailResponse {
   addons?: TenantAddon[];
 }
 
+export interface PlatformTenantProduct {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  category?: string;
+  thumbnail?: string;
+  images?: string[];
+  price: number;
+  total_stock: number;
+  sku?: string;
+  variant_count: number;
+  status: string;
+  isActive: boolean;
+  dateCreated?: string;
+}
+
+export interface PlatformTenantProductsResponse {
+  products: PlatformTenantProduct[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total_items: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
+
 export const getPlatformTenantDetail = async (id: string) => {
   const { data } = await apiClient.get<any>(`/api/v1/platform/tenants/${id}`);
   return (data?.success?.data || data) as TenantDetailResponse;
+};
+
+export const getPlatformTenantProducts = async (
+  tenantId: string,
+  params?: { page?: number; per_page?: number; search?: string; category?: string; status?: string }
+) => {
+  const { data } = await apiClient.get<any>(`/api/v1/platform/tenants/${tenantId}/products`, {
+    params,
+  });
+  return (data?.success?.data || { products: [], pagination: {} }) as PlatformTenantProductsResponse;
 };
 
 export const rotateTenantApiKey = async (id: string) => {

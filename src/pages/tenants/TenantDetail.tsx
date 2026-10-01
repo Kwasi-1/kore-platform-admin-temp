@@ -21,6 +21,7 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import ApiKeyRevealModal from '@/components/tenants/ApiKeyRevealModal';
 import EditPlanModal from '@/components/tenants/EditPlanModal';
 import TenantStatusModal from '@/components/tenants/TenantStatusModal';
+import TenantCatalogModal from '@/components/tenants/TenantCatalogModal';
 import { 
   ChevronLeft, 
   Edit3, 
@@ -34,7 +35,8 @@ import {
   Activity,
   BarChart3,
   MoreHorizontal,
-  RefreshCw
+  RefreshCw,
+  Package
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -58,6 +60,7 @@ export default function TenantDetail() {
   const [isRevealOpen, setIsRevealOpen] = useState(false);
   const [isEditPlanOpen, setIsEditPlanOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
 
   // Generated Key Reveal
   const [newApiKey, setNewApiKey] = useState('');
@@ -247,6 +250,15 @@ export default function TenantDetail() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setIsCatalogModalOpen(true)}
+              className="h-9 flex items-center gap-1.5 text-xs font-semibold"
+            >
+              <Package className="h-3.5 w-3.5 text-muted-foreground" /> View Catalog
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setIsEditPlanOpen(true)}
               className="h-9 flex items-center gap-1.5 text-xs font-semibold"
             >
@@ -290,6 +302,10 @@ export default function TenantDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setIsCatalogModalOpen(true)} className="cursor-pointer text-xs">
+                  <Package className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                  Audit Store Catalog
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsEditPlanOpen(true)} className="cursor-pointer text-xs">
                   <Edit3 className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                   Change Subscription Plan
@@ -322,12 +338,18 @@ export default function TenantDetail() {
       </div>
 
       {/* 1. Stat Cards Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <DashboardCard
           title="All Time Revenue"
           value={formatGHS(metrics.total_revenue)}
           subvalue="Accrued from online + POS terminals"
           action={<Building className="h-5 w-5 text-muted-foreground" />}
+        />
+        <DashboardCard
+          title="Revenue This Month"
+          value={formatGHS(metrics.monthly_revenue)}
+          subvalue="Current calendar month volume"
+          action={<BarChart3 className="h-5 w-5 text-muted-foreground" />}
         />
         <DashboardCard
           title="Total Transactions"
@@ -336,16 +358,18 @@ export default function TenantDetail() {
           action={<Activity className="h-5 w-5 text-muted-foreground" />}
         />
         <DashboardCard
+          title="Store Products"
+          value={metrics.total_products ?? 0}
+          subvalue="Active items · Click to audit"
+          action={<Package className="h-5 w-5 text-muted-foreground" />}
+          onClick={() => setIsCatalogModalOpen(true)}
+          className="cursor-pointer hover:border-primary/50 transition-colors"
+        />
+        <DashboardCard
           title="Staff Count"
           value={metrics.staff_count}
           subvalue="Assigned cashier & admin roles"
           action={<User className="h-5 w-5 text-muted-foreground" />}
-        />
-        <DashboardCard
-          title="Revenue This Month"
-          value={formatGHS(metrics.monthly_revenue)}
-          subvalue="Current calendar month volume"
-          action={<BarChart3 className="h-5 w-5 text-muted-foreground" />}
         />
       </div>
 
@@ -675,6 +699,13 @@ export default function TenantDetail() {
       <TenantStatusModal
         isOpen={isStatusModalOpen}
         onClose={() => setIsStatusModalOpen(false)}
+        tenant={tenant}
+      />
+
+      {/* Catalog Audit Modal */}
+      <TenantCatalogModal
+        isOpen={isCatalogModalOpen}
+        onClose={() => setIsCatalogModalOpen(false)}
         tenant={tenant}
       />
     </div>
