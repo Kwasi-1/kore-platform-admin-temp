@@ -161,6 +161,36 @@ export default function TenantDetail() {
   );
   const hasEcommerce = isIncludedInPlan || Boolean(tenant?.has_ecommerce) || addonsList.some((a) => a.addon_key === 'ecommerce' && a.status === 'active');
 
+  const planConfig = getPlanConfig(tenant?.plan);
+  const baseMonthlyPrice = planConfig.priceMonthly || 0;
+
+  const activeMonthlyAddons = addonsList.filter(
+    (a) => (a.status === 'active' || a.status === 'trial') && a.billing_cycle === 'monthly'
+  );
+
+  const addonsMonthlyPrice = activeMonthlyAddons.reduce((sum, a) => {
+    const def = getAddonDefinition(a.addon_key);
+    const p = a.price != null ? a.price : (def?.priceMonthly || 0);
+    return sum + p;
+  }, 0);
+
+  const totalMonthlyMRR = baseMonthlyPrice + addonsMonthlyPrice;
+  const annualCommitment = Math.round(totalMonthlyMRR * 12 * 0.9);
+
+  // Renewal date calculation from tenant anchor date
+  const tenantAnchorDate = tenant?.date_created ? new Date(tenant.date_created) : new Date();
+  const renewalDay = tenantAnchorDate.getDate();
+  const now = new Date();
+  const nextRenewalDate = new Date(now.getFullYear(), now.getMonth(), renewalDay);
+  if (nextRenewalDate <= now) {
+    nextRenewalDate.setMonth(nextRenewalDate.getMonth() + 1);
+  }
+  const nextRenewalFormatted = nextRenewalDate.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
   const promptToggleEcommerceAddon = () => {
     if (!tenant) return;
     if (hasEcommerce && !isIncludedInPlan) {
@@ -242,11 +272,14 @@ export default function TenantDetail() {
             <h2 className="text-2xl font-bold font-header tracking-tight text-foreground">
               {tenant.business_name}
             </h2>
-            <Badge className={getPlanConfig(tenant.plan).badgeClassName}>
-              {getPlanConfig(tenant.plan).label}
+            <Badge className={planConfig.badgeClassName}>
+              {planConfig.label}
             </Badge>
             <Badge variant={tenant.is_active ? 'success' : 'danger'}>
               {tenant.is_active ? 'Active' : 'Suspended'}
+            </Badge>
+            <Badge variant="outline" className="font-mono text-xs font-semibold bg-primary/5 text-primary border-primary/20">
+              {formatGHS(totalMonthlyMRR)} / mo
             </Badge>
             {isDemoMode && (
               <span className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
@@ -399,9 +432,14 @@ export default function TenantDetail() {
           
           {/* Business Details Card */}
           <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header pb-2 border-b border-border">
-              Business Profile
-            </h3>
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
+                Business Profile
+              </h3>
+              <span className="text-xs font-bold text-foreground bg-muted/40 px-2 py-0.5 rounded border border-border/60">
+                {formatGHS(totalMonthlyMRR)} / mo
+              </span>
+            </div>
             
             <div className="space-y-3 text-xs">
               <div className="flex justify-between">
@@ -410,7 +448,7 @@ export default function TenantDetail() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Active Plan:</span>
-                <span className="font-semibold text-foreground">{getPlanConfig(tenant.plan).label}</span>
+                <span className="font-semibold text-foreground">{planConfig.label}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">System Status:</span>
@@ -437,6 +475,50 @@ export default function TenantDetail() {
                 <span className="font-mono text-foreground font-semibold">
                   {tenant.paystack_subaccount_code || 'None Configured'}
                 </span>
+              </div>
+            </div>
+
+            {/* Platform Subscription Billing Breakdown */}
+            <div className="pt-3 border-t border-border space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground font-header">
+                  Subscription Billing
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsEntitlementsModalOpen(true)}
+                  className="text-[11px] text-primary hover:underline font-semibold"
+                >
+                  Audit Entitlements &rarr;
+                </button>
+              </div>
+
+              <div className="rounded-lg bg-muted/30 border border-border/60 p-3 space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Base Plan ({planConfig.label}):</span>
+                  <span className="font-medium text-foreground">{formatGHS(baseMonthlyPrice)} / mo</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Active Add-ons:</span>
+                  <span className="font-medium text-foreground">
+                    {addonsMonthlyPrice > 0 ? `+${formatGHS(addonsMonthlyPrice)} / mo` : 'GH₵ 0.00'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-border/40 font-semibold">
+                  <span className="text-foreground">Total Monthly Recurring:</span>
+                  <span className="font-semibold text-foreground text-sm">{formatGHS(totalMonthlyMRR)} / mo</span>
+                </div>
+                <div className="flex justify-between items-center pt-1 text-[11px] text-muted-foreground">
+                  <span>Annual Commitment (Prepaid):</span>
+                  <span className="text-foreground">
+                    {formatGHS(annualCommitment)} / yr{' '}
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">(10% off)</span>
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-[11px] text-muted-foreground">
+                  <span>Next Renewal Cycle:</span>
+                  <span className="font-medium text-foreground">{nextRenewalFormatted}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -467,33 +549,22 @@ export default function TenantDetail() {
           <div className="bg-card border border-border rounded-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <div className="flex items-center gap-2">
-                <Puzzle className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
                   Add-ons & Modules
                 </h3>
               </div>
               <div className="flex items-center gap-1.5">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setIsEntitlementsModalOpen(true)}
-                  className="h-7 px-2 text-[11px] font-semibold flex items-center gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
-                  title="Audit effective store modules & access"
-                >
-                  <Layers className="h-3 w-3 text-primary" />
-                  Audit Access
-                </Button>
                 <Badge variant="outline" className="text-[10px]">
                   {addonsList.filter((a) => a.status === 'active' || a.status === 'trial').length} Active
                 </Badge>
                 <Button
                   size="sm"
                   variant="outline"
+                  radius='default'
                   onClick={() => setIsAttachAddonModalOpen(true)}
-                  className="h-7 px-2 text-[11px] font-semibold flex items-center gap-1 border-primary/30 hover:border-primary text-primary"
+                  className="h-7 px-2 text-[11px] font-semibold flex items-center gap-1"
                 >
                   <Plus className="h-3 w-3" />
-                  Attach Add-on
                 </Button>
               </div>
             </div>
