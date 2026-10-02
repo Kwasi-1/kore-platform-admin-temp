@@ -185,11 +185,16 @@ export interface PlatformTenantProductsResponse {
   products: PlatformTenantProduct[];
   pagination: {
     page: number;
-    per_page: number;
-    total_items: number;
-    total_pages: number;
-    has_next: boolean;
-    has_prev: boolean;
+    per_page?: number;
+    perPage?: number;
+    total_items?: number;
+    total?: number;
+    total_pages?: number;
+    pages?: number;
+    has_next?: boolean;
+    hasNext?: boolean;
+    has_prev?: boolean;
+    hasPrev?: boolean;
   };
 }
 

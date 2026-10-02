@@ -11,11 +11,8 @@ import {
   Search, 
   RefreshCw, 
   ShieldCheck, 
-  Layers, 
-  AlertCircle, 
   ChevronLeft, 
-  ChevronRight,
-  SlidersHorizontal
+  ChevronRight
 } from 'lucide-react';
 import { formatShortDate } from '@/utils/date';
 
@@ -28,6 +25,25 @@ interface TenantCatalogModalProps {
   } | null;
 }
 
+/**
+ * Defensive helper to safely extract numeric values from raw numbers, strings, or { source, parsedValue } wrapper objects
+ */
+const parseNumericValue = (val: any): number => {
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  if (typeof val === 'string') {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+  }
+  if (typeof val === 'object' && val !== null) {
+    if ('parsedValue' in val && typeof val.parsedValue === 'number') return val.parsedValue;
+    if ('source' in val && typeof val.source === 'string') {
+      const num = parseFloat(val.source);
+      return isNaN(num) ? 0 : num;
+    }
+  }
+  return 0;
+};
+
 export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
   isOpen,
   onClose,
@@ -37,10 +53,10 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(20);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['platform_tenant_products', tenant?.id, currentPage, searchTerm, statusFilter],
+    queryKey: ['platform_tenant_products', tenant?.id, currentPage, pageSize, searchTerm, statusFilter],
     queryFn: () => {
       if (!tenant?.id) throw new Error('Tenant ID required');
       return getPlatformTenantProducts(tenant.id, {
@@ -57,13 +73,24 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
   if (!tenant) return null;
 
   const products: PlatformTenantProduct[] = data?.products || [];
-  const pagination = data?.pagination || {
-    page: 1,
-    per_page: pageSize,
-    total_items: 0,
-    total_pages: 1,
-    has_next: false,
-    has_prev: false,
+  
+  // Safely normalize both camelCase and snake_case backend pagination payloads
+  const rawPagination = (data?.pagination || {}) as any;
+  const pagination = {
+    page: rawPagination.page ?? currentPage,
+    perPage: rawPagination.perPage ?? rawPagination.per_page ?? pageSize,
+    total: rawPagination.total ?? rawPagination.total_items ?? products.length,
+    pages: rawPagination.pages ?? rawPagination.total_pages ?? Math.max(1, Math.ceil((rawPagination.total ?? products.length) / pageSize)),
+    hasNext: Boolean(
+      rawPagination.hasNext ?? 
+      rawPagination.has_next ?? 
+      (currentPage * pageSize < (rawPagination.total ?? rawPagination.total_items ?? 0))
+    ),
+    hasPrev: Boolean(
+      rawPagination.hasPrev ?? 
+      rawPagination.has_prev ?? 
+      (currentPage > 1)
+    ),
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,9 +103,14 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
     setCurrentPage(1);
   };
 
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-6 sm:rounded-xl">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-6 sm:rounded-xl">
         {/* Header */}
         <DialogHeader className="pb-3 border-b border-border">
           <div className="flex items-center gap-3">
@@ -109,7 +141,7 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
 
         {/* Search & Filter Toolbar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <input
               type="text"
@@ -120,7 +152,8 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
+            {/* Status Filter */}
             <div className="flex items-center rounded-md border border-border p-0.5 bg-secondary/30 text-xs">
               <button
                 type="button"
@@ -157,6 +190,25 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
               </button>
             </div>
 
+            {/* Page Size Selector */}
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground border border-border rounded-md px-2 py-1 bg-secondary/30">
+              <span className="text-[10px] uppercase font-semibold">Per page:</span>
+              {[10, 20, 50].map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => handlePageSizeChange(size)}
+                  className={`px-1.5 py-0.5 rounded font-semibold transition-colors ${
+                    pageSize === size
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+
             <Button
               variant="outline"
               size="sm"
@@ -171,7 +223,12 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
         </div>
 
         {/* Product Table Container */}
-        <div className="flex-1 overflow-auto border border-border rounded-lg min-h-[280px]">
+        <div className="flex-1 overflow-auto border border-border rounded-lg min-h-[340px] relative">
+          {/* Backdrop spinner during page navigation or filter changes */}
+          {isFetching && !isLoading && (
+            <Spinner withBackdrop />
+          )}
+
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64 gap-2 text-muted-foreground">
               <Spinner className="py-2" />
@@ -213,8 +270,10 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
               </thead>
               <tbody className="divide-y divide-border">
                 {products.map((p) => {
-                  const hasStock = p.total_stock > 0;
-                  const isLowStock = hasStock && p.total_stock <= 5;
+                  const stock = parseNumericValue(p.total_stock);
+                  const price = parseNumericValue(p.price);
+                  const hasStock = stock > 0;
+                  const isLowStock = hasStock && stock <= 5;
 
                   return (
                     <tr key={p.id} className="hover:bg-muted/30 transition-colors">
@@ -264,7 +323,7 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
 
                       {/* Retail Price */}
                       <td className="py-2.5 px-3 text-right font-semibold text-foreground whitespace-nowrap">
-                        {formatGHS(p.price || 0)}
+                        {formatGHS(price)}
                       </td>
 
                       {/* Stock Status */}
@@ -275,11 +334,11 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
                           </span>
                         ) : isLowStock ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                            {p.total_stock} (Low)
+                            {stock} (Low)
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                            {p.total_stock} units
+                            {stock} units
                           </span>
                         )}
                       </td>
@@ -308,9 +367,9 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
         <DialogFooter className="pt-3 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
           <div className="text-xs text-muted-foreground">
             Total items:{' '}
-            <strong className="text-foreground">{pagination.total_items}</strong>
-            {pagination.total_pages > 1 && (
-              <span> · Page {pagination.page} of {pagination.total_pages}</span>
+            <strong className="text-foreground">{pagination.total}</strong>
+            {pagination.pages > 1 && (
+              <span> · Page <strong>{pagination.page}</strong> of <strong>{pagination.pages}</strong></span>
             )}
           </div>
 
@@ -319,8 +378,8 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={!pagination.has_prev || isFetching}
-              className="h-8 px-2.5 text-xs"
+              disabled={!pagination.hasPrev || isFetching}
+              className="h-8 px-2.5 text-xs font-semibold"
             >
               <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Previous
             </Button>
@@ -328,8 +387,8 @@ export const TenantCatalogModal: React.FC<TenantCatalogModalProps> = ({
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((prev) => prev + 1)}
-              disabled={!pagination.has_next || isFetching}
-              className="h-8 px-2.5 text-xs"
+              disabled={!pagination.hasNext || isFetching}
+              className="h-8 px-2.5 text-xs font-semibold"
             >
               Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
             </Button>
