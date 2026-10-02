@@ -516,7 +516,7 @@ export interface TenantAddon {
   tenant_id: string;
   addon_key: string;
   status: 'active' | 'trial' | 'cancelled' | 'expired';
-  billing_cycle: 'monthly' | 'yearly' | 'complimentary';
+  billing_cycle: 'monthly' | 'yearly' | 'complimentary' | 'one_time';
   price?: number | null;
   date_activated?: string;
   expires_at?: string | null;

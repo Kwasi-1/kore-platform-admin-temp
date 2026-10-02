@@ -22,6 +22,8 @@ import ApiKeyRevealModal from '@/components/tenants/ApiKeyRevealModal';
 import EditPlanModal from '@/components/tenants/EditPlanModal';
 import TenantStatusModal from '@/components/tenants/TenantStatusModal';
 import TenantCatalogModal from '@/components/tenants/TenantCatalogModal';
+import { AttachAddonModal } from '@/components/tenants/AttachAddonModal';
+import { getAddonDefinition } from '@/config/addons';
 import { 
   ChevronLeft, 
   Edit3, 
@@ -36,7 +38,10 @@ import {
   BarChart3,
   MoreHorizontal,
   RefreshCw,
-  Package
+  Package,
+  Plus,
+  Puzzle,
+  Sparkles
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -61,6 +66,7 @@ export default function TenantDetail() {
   const [isEditPlanOpen, setIsEditPlanOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
+  const [isAttachAddonModalOpen, setIsAttachAddonModalOpen] = useState(false);
 
   // Generated Key Reveal
   const [newApiKey, setNewApiKey] = useState('');
@@ -448,77 +454,109 @@ export default function TenantDetail() {
           {/* Add-ons & Modules Card */}
           <div className="bg-card border border-border rounded-xl p-5 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-border">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
-                Add-ons & Modules
-              </h3>
-              <Badge variant="outline" className="text-[10px]">
-                {addonsList.filter((a) => a.status === 'active').length} Active
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Puzzle className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
+                  Add-ons & Modules
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-[10px]">
+                  {addonsList.filter((a) => a.status === 'active' || a.status === 'trial').length} Active
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsAttachAddonModalOpen(true)}
+                  className="h-7 px-2 text-[11px] font-semibold flex items-center gap-1 border-primary/30 hover:border-primary text-primary"
+                >
+                  <Plus className="h-3 w-3" />
+                  Attach Add-on
+                </Button>
+              </div>
             </div>
 
-            <div className="space-y-3">
-              {/* Ecommerce Add-on Row */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/60">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-foreground">Ecommerce Storefront</span>
-                    {hasEcommerce ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[9px] px-1.5 py-0">
-                        {isIncludedInPlan ? 'Included in Plan' : 'Add-on Active'}
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
-                        Not Enabled
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Online storefront, Paystack checkout & web orders
+            <div className="space-y-2.5">
+              {addonsList.filter((a) => a.status === 'active' || a.status === 'trial').length === 0 ? (
+                <div className="py-6 px-4 text-center border border-dashed border-border rounded-xl bg-muted/20 space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">
+                    No custom add-on modules attached
                   </p>
-                </div>
-
-                {!isIncludedInPlan && (
+                  <p className="text-[11px] text-muted-foreground/80 max-w-xs mx-auto">
+                    Extend features for this merchant (Ecommerce, Payroll, Advanced Reports, etc.) without altering their base tier.
+                  </p>
                   <Button
                     size="sm"
-                    variant={hasEcommerce ? 'outline' : 'default'}
-                    disabled={isTogglingAddon}
-                    onClick={promptToggleEcommerceAddon}
-                    className={`h-7 px-2.5 text-[11px] font-semibold ${
-                      hasEcommerce
-                        ? 'text-rose-600 border-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/20'
-                        : 'bg-primary text-primary-foreground'
-                    }`}
+                    variant="outline"
+                    onClick={() => setIsAttachAddonModalOpen(true)}
+                    className="h-7 text-xs mt-1"
                   >
-                    {hasEcommerce ? 'Cancel Add-on' : 'Attach Add-on'}
+                    <Plus className="h-3 w-3 mr-1" /> Attach Add-on
                   </Button>
-                )}
-              </div>
+                </div>
+              ) : (
+                addonsList
+                  .filter((a) => a.status === 'active' || a.status === 'trial')
+                  .map((addon) => {
+                    const def = getAddonDefinition(addon.addon_key);
+                    const displayName = def?.name || addon.addon_key.replace(/_/g, ' ');
+                    const isTrial = addon.status === 'trial';
+                    const isComplimentary = addon.billing_cycle === 'complimentary' || !addon.price;
 
-              {/* Other add-ons if any */}
-              {addonsList
-                .filter((a) => a.addon_key !== 'ecommerce')
-                .map((addon) => (
-                  <div key={addon.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20 border border-border/40 text-xs">
-                    <div>
-                      <span className="font-semibold capitalize">{addon.addon_key.replace('_', ' ')}</span>
-                      <span className="text-[10px] text-muted-foreground ml-2">({addon.billing_cycle})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px] text-emerald-600">
-                        {addon.status}
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => promptDetachOtherAddon(addon.addon_key, addon.addon_key.replace('_', ' '))}
-                        disabled={isTogglingAddon}
-                        className="h-6 px-2 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                    return (
+                      <div
+                        key={addon.id || addon.addon_key}
+                        className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/60 text-xs hover:border-border transition-colors"
                       >
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground capitalize">
+                              {displayName}
+                            </span>
+                            {isTrial ? (
+                              <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[9px] px-1.5 py-0">
+                                Trial
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[9px] px-1.5 py-0">
+                                Active
+                              </Badge>
+                            )}
+                            {def?.category && (
+                              <Badge variant="outline" className="text-[9px] uppercase px-1 py-0 text-muted-foreground">
+                                {def.category}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">
+                            {isComplimentary ? (
+                              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Complimentary</span>
+                            ) : (
+                              <span className="font-mono font-semibold text-foreground">
+                                {formatGHS(addon.price || 0)} / {addon.billing_cycle === 'one_time' ? 'setup' : 'mo'}
+                              </span>
+                            )}
+                            {addon.date_activated && (
+                              <span className="ml-1.5 text-muted-foreground/80">
+                                · Activated {formatShortDate(addon.date_activated)}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => promptDetachOtherAddon(addon.addon_key, displayName)}
+                          disabled={isTogglingAddon}
+                          className="h-7 px-2 text-[11px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                        >
+                          Revoke
+                        </Button>
+                      </div>
+                    );
+                  })
+              )}
             </div>
           </div>
 
@@ -707,6 +745,14 @@ export default function TenantDetail() {
         isOpen={isCatalogModalOpen}
         onClose={() => setIsCatalogModalOpen(false)}
         tenant={tenant}
+      />
+
+      {/* Attach Add-on Modal */}
+      <AttachAddonModal
+        isOpen={isAttachAddonModalOpen}
+        onClose={() => setIsAttachAddonModalOpen(false)}
+        tenant={tenant}
+        currentAddons={addonsList}
       />
     </div>
   );
