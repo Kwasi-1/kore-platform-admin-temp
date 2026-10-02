@@ -23,6 +23,7 @@ import EditPlanModal from '@/components/tenants/EditPlanModal';
 import TenantStatusModal from '@/components/tenants/TenantStatusModal';
 import TenantCatalogModal from '@/components/tenants/TenantCatalogModal';
 import { AttachAddonModal } from '@/components/tenants/AttachAddonModal';
+import { TenantEntitlementsModal } from '@/components/tenants/TenantEntitlementsModal';
 import { getAddonDefinition } from '@/config/addons';
 import { 
   ChevronLeft, 
@@ -41,7 +42,8 @@ import {
   Package,
   Plus,
   Puzzle,
-  Sparkles
+  Sparkles,
+  Layers
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -67,6 +69,7 @@ export default function TenantDetail() {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
   const [isAttachAddonModalOpen, setIsAttachAddonModalOpen] = useState(false);
+  const [isEntitlementsModalOpen, setIsEntitlementsModalOpen] = useState(false);
 
   // Generated Key Reveal
   const [newApiKey, setNewApiKey] = useState('');
@@ -307,7 +310,16 @@ export default function TenantDetail() {
                   <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setIsEntitlementsModalOpen(true)} className="cursor-pointer text-xs font-semibold text-primary">
+                  <Layers className="mr-2 h-3.5 w-3.5 text-primary" />
+                  Audit Modules & Entitlements
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsAttachAddonModalOpen(true)} className="cursor-pointer text-xs">
+                  <Plus className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                  Attach Add-on Module
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setIsCatalogModalOpen(true)} className="cursor-pointer text-xs">
                   <Package className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                   Audit Store Catalog
@@ -460,7 +472,17 @@ export default function TenantDetail() {
                   Add-ons & Modules
                 </h3>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setIsEntitlementsModalOpen(true)}
+                  className="h-7 px-2 text-[11px] font-semibold flex items-center gap-1 text-muted-foreground hover:text-foreground hover:bg-muted"
+                  title="Audit effective store modules & access"
+                >
+                  <Layers className="h-3 w-3 text-primary" />
+                  Audit Access
+                </Button>
                 <Badge variant="outline" className="text-[10px]">
                   {addonsList.filter((a) => a.status === 'active' || a.status === 'trial').length} Active
                 </Badge>
@@ -753,6 +775,15 @@ export default function TenantDetail() {
         onClose={() => setIsAttachAddonModalOpen(false)}
         tenant={tenant}
         currentAddons={addonsList}
+      />
+
+      {/* Effective Modules & Access Audit Modal */}
+      <TenantEntitlementsModal
+        isOpen={isEntitlementsModalOpen}
+        onClose={() => setIsEntitlementsModalOpen(false)}
+        tenant={tenant}
+        addons={addonsList}
+        onOpenAttachAddon={() => setIsAttachAddonModalOpen(true)}
       />
     </div>
   );

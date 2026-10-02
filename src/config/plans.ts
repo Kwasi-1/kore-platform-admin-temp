@@ -97,3 +97,216 @@ export const getPlanConfig = (planKey?: string): PlanConfig => {
     priceMonthly: 0,
   };
 };
+
+export const BASE_PLAN_MODULES: Record<string, string[]> = {
+  starter: [
+    'pos',
+    'inventory_basic',
+    'reports_basic',
+    'settings',
+  ],
+  standard: [
+    'pos',
+    'credit_ledger',
+    'returns',
+    'inventory_basic',
+    'inventory_advanced',
+    'suppliers',
+    'purchase_orders',
+    'supplier_credit',
+    'stock_reconciliation',
+    'adjustments',
+    'staff',
+    'expenses',
+    'reports_basic',
+    'reports_advanced',
+    'settings',
+  ],
+  business: [
+    'pos',
+    'credit_ledger',
+    'returns',
+    'inventory_basic',
+    'inventory_advanced',
+    'suppliers',
+    'purchase_orders',
+    'supplier_credit',
+    'stock_reconciliation',
+    'adjustments',
+    'staff',
+    'expenses',
+    'reports_basic',
+    'reports_advanced',
+    'ecommerce',
+    'payroll',
+    'settings',
+  ],
+  ecom_only: [
+    'inventory_basic',
+    'ecommerce',
+    'reports_basic',
+    'settings',
+  ],
+};
+
+// Aliases
+BASE_PLAN_MODULES['pos_only'] = BASE_PLAN_MODULES['standard'];
+BASE_PLAN_MODULES['full_suite'] = BASE_PLAN_MODULES['business'];
+BASE_PLAN_MODULES['ecommerce_only'] = BASE_PLAN_MODULES['ecom_only'];
+
+export interface SystemModuleMetadata {
+  key: string;
+  name: string;
+  category: 'pos' | 'inventory' | 'operations' | 'reports' | 'ecommerce';
+  categoryLabel: string;
+  description: string;
+  minTier: 'starter' | 'standard' | 'business' | 'ecom_only';
+}
+
+export const ALL_SYSTEM_MODULES: SystemModuleMetadata[] = [
+  // POS & Checkout
+  {
+    key: 'pos',
+    name: 'Point of Sale (Terminal & Register)',
+    category: 'pos',
+    categoryLabel: 'POS & Sales',
+    description: 'In-store cashier checkouts, register cash drawer float, barcode scanning, and printed receipts.',
+    minTier: 'starter',
+  },
+  {
+    key: 'credit_ledger',
+    name: 'Customer Credit Ledger',
+    category: 'pos',
+    categoryLabel: 'POS & Sales',
+    description: 'Sell on credit, track individual customer outstanding debt, and process credit settlements.',
+    minTier: 'standard',
+  },
+  {
+    key: 'returns',
+    name: 'Returns, Refunds & Exchanges',
+    category: 'pos',
+    categoryLabel: 'POS & Sales',
+    description: 'Process product returns, refunds, cashier cash drawer adjustments, and inventory restock.',
+    minTier: 'standard',
+  },
+
+  // Inventory & Purchasing
+  {
+    key: 'inventory_basic',
+    name: 'Core Inventory & Product Catalog',
+    category: 'inventory',
+    categoryLabel: 'Inventory',
+    description: 'Standard product catalog, barcode assignments, variant pricing, and real-time stock levels.',
+    minTier: 'starter',
+  },
+  {
+    key: 'inventory_advanced',
+    name: 'Advanced Packaging & Expiry Tracking',
+    category: 'inventory',
+    categoryLabel: 'Inventory',
+    description: 'Multi-tiered packaging (cartons vs pieces), reorder threshold alerts, and batch/expiry dates.',
+    minTier: 'standard',
+  },
+  {
+    key: 'suppliers',
+    name: 'Supplier & Vendor Directory',
+    category: 'inventory',
+    categoryLabel: 'Inventory',
+    description: 'Database of product suppliers, contact representatives, payment terms, and vendor history.',
+    minTier: 'standard',
+  },
+  {
+    key: 'purchase_orders',
+    name: 'Purchase Orders & Stock Receiving',
+    category: 'inventory',
+    categoryLabel: 'Inventory',
+    description: 'Draft purchase orders, track supplier delivery statuses, and automatically receive inventory.',
+    minTier: 'standard',
+  },
+  {
+    key: 'supplier_credit',
+    name: 'Supplier Credit & Accounts Payable',
+    category: 'inventory',
+    categoryLabel: 'Inventory',
+    description: 'Track store debt owed to product suppliers, invoice due dates, and partial repayments.',
+    minTier: 'standard',
+  },
+  {
+    key: 'stock_reconciliation',
+    name: 'Physical Stock Reconciliation',
+    category: 'inventory',
+    categoryLabel: 'Inventory',
+    description: 'Audit physical stock against digital records, log shrinkage variances, and balance discrepancies.',
+    minTier: 'standard',
+  },
+  {
+    key: 'adjustments',
+    name: 'Manual Stock Adjustments',
+    category: 'inventory',
+    categoryLabel: 'Inventory',
+    description: 'Record stock damage write-offs, manual inventory corrections, theft, or internal store transfers.',
+    minTier: 'standard',
+  },
+
+  // Team & Operations
+  {
+    key: 'staff',
+    name: 'Staff & Role-Based Access Control',
+    category: 'operations',
+    categoryLabel: 'Operations',
+    description: 'Individual cashier logins, shift assignments, manager permissions, and activity audit logs.',
+    minTier: 'standard',
+  },
+  {
+    key: 'expenses',
+    name: 'Operating Expense Tracking',
+    category: 'operations',
+    categoryLabel: 'Operations',
+    description: 'Record daily out-of-pocket store expenses, utilities, transport, rent, and petty cash outlays.',
+    minTier: 'standard',
+  },
+  {
+    key: 'payroll',
+    name: 'Staff Payroll Management',
+    category: 'operations',
+    categoryLabel: 'Operations',
+    description: 'Monthly payroll runs, statutory deductions (SSNIT/GRA), payslip PDF generation, and salary records.',
+    minTier: 'business',
+  },
+
+  // Analytics & Reporting
+  {
+    key: 'reports_basic',
+    name: 'Daily Sales & Cash Summaries',
+    category: 'reports',
+    categoryLabel: 'Analytics',
+    description: 'End-of-day sales totals, payment method distributions, cashier float reconciliation, and register totals.',
+    minTier: 'starter',
+  },
+  {
+    key: 'reports_advanced',
+    name: 'Advanced Profit/Loss Analytics',
+    category: 'reports',
+    categoryLabel: 'Analytics',
+    description: 'Gross profit margins, cashier performance telemetry, stock velocity ranking, and Excel/CSV exports.',
+    minTier: 'standard',
+  },
+
+  // Digital Commerce
+  {
+    key: 'ecommerce',
+    name: 'Integrated Ecommerce Storefront',
+    category: 'ecommerce',
+    categoryLabel: 'Ecommerce',
+    description: 'Hosted online store, Paystack card/MoMo checkout, web order management, and discount codes.',
+    minTier: 'business',
+  },
+  {
+    key: 'settings',
+    name: 'Store & Register Settings',
+    category: 'operations',
+    categoryLabel: 'Operations',
+    description: 'Printed receipt headers/footers, currency settings, register micro-features, and payment gates.',
+    minTier: 'starter',
+  },
+];

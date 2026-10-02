@@ -30,6 +30,7 @@ export interface Tenant {
   monthly_revenue?: number;
   transaction_count?: number;
   active_addons?: string[];
+  modules?: string[];
   has_ecommerce?: boolean;
 }
 
