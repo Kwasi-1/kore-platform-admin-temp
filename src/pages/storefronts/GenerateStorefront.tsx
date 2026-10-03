@@ -6,9 +6,9 @@ import {
   Tenant, 
   previewAIStorefrontContent, 
   generateAndDeployStorefront, 
-  GeneratedStorefrontContent,
-  attachTenantAddon
+  GeneratedStorefrontContent
 } from '@/api/platform';
+import { AttachAddonModal } from '@/components/tenants/AttachAddonModal';
 import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,6 +73,28 @@ const COLOR_PRESETS = [
 // Single unified storefront deployment. Theme is selected by query param.
 const STOREFRONT_BASE_URL =
   (import.meta as any).env?.VITE_STOREFRONT_BASE_URL || 'http://localhost:5175';
+
+const parseStorefrontBase = (baseUrl: string) => {
+  try {
+    const url = new URL(baseUrl);
+    const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    return {
+      protocol: url.protocol,
+      hostname: url.hostname,
+      port: url.port ? `:${url.port}` : (isLocal ? ':5175' : ''),
+      isLocal,
+      host: url.host,
+    };
+  } catch {
+    return {
+      protocol: 'http:',
+      hostname: 'localhost',
+      port: ':5175',
+      isLocal: true,
+      host: 'localhost:5175',
+    };
+  }
+};
 
 const TEMPLATES = [
   {
@@ -149,8 +171,7 @@ export default function GenerateStorefront() {
     return tenants.find((t) => t.id === selectedTenantId);
   }, [tenants, selectedTenantId]);
 
-  const [isAttachingAddon, setIsAttachingAddon] = useState<boolean>(false);
-  const [isAttachConfirmOpen, setIsAttachConfirmOpen] = useState<boolean>(false);
+  const [isAttachAddonModalOpen, setIsAttachAddonModalOpen] = useState<boolean>(false);
 
   const hasEcommerceModule = useMemo(() => {
     if (!selectedTenant) return true;
@@ -160,25 +181,6 @@ export default function GenerateStorefront() {
     if (selectedTenant.active_addons && selectedTenant.active_addons.includes('ecommerce')) return true;
     return false;
   }, [selectedTenant]);
-
-  const handleAttachEcommerceAddon = async () => {
-    if (!selectedTenant) return;
-    setIsAttachingAddon(true);
-    try {
-      await attachTenantAddon(selectedTenant.id, {
-        addon_key: 'ecommerce',
-        billing_cycle: 'complimentary',
-        price: 0,
-        status: 'active',
-      });
-      toast.success(`Ecommerce Add-On attached to ${selectedTenant.business_name}!`);
-      queryClient.invalidateQueries({ queryKey: ['platform-tenants-list'] });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error?.message || 'Failed to attach add-on');
-    } finally {
-      setIsAttachingAddon(false);
-    }
-  };
 
   const activeTemplate = useMemo(() => {
     return TEMPLATES.find((t) => t.id === selectedTemplateId) || TEMPLATES[0];
@@ -190,21 +192,30 @@ export default function GenerateStorefront() {
     return `${activeTemplate.baseUrl}/?tenant=${slug}&theme=${activeTemplate.id}&preview=true`;
   }, [activeTemplate, selectedTenant]);
 
+  const parsedBase = useMemo(() => parseStorefrontBase(STOREFRONT_BASE_URL), []);
+
   // Subdomain URL — what the merchant actually browses in a real tab.
-  // Uses *.localhost:5175 in dev (Chrome RFC 6761), *.kore-store.app in prod.
   const subdomainUrl = useMemo(() => {
-    const slug = selectedTenant?.slug || 'my-store';
-    const port = 5175;
-    return `http://${slug}.localhost:${port}/?theme=${activeTemplate.id}`;
-  }, [activeTemplate, selectedTenant]);
+    const rawSub = subdomain || selectedTenant?.slug || 'my-store';
+    const sub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
+    if (parsedBase.isLocal) {
+      return `${parsedBase.protocol}//${sub}.localhost${parsedBase.port}/?theme=${activeTemplate.id}`;
+    }
+    return `${parsedBase.protocol}//${sub}.${parsedBase.host}/?theme=${activeTemplate.id}`;
+  }, [parsedBase, subdomain, selectedTenant, activeTemplate]);
 
   // Auto-populate business name & slug when tenant is selected
   useEffect(() => {
     if (selectedTenant) {
       setBusinessName(selectedTenant.business_name || '');
-      setSubdomain(`${selectedTenant.slug}.kore-store.app`);
+      const slug = selectedTenant.slug;
+      if (parsedBase.isLocal) {
+        setSubdomain(`${slug}.localhost${parsedBase.port}`);
+      } else {
+        setSubdomain(`${slug}.${parsedBase.host}`);
+      }
     }
-  }, [selectedTenant]);
+  }, [selectedTenant, parsedBase]);
 
   // Handle AI Content Generation
   const handleGenerateAI = async () => {
@@ -417,12 +428,11 @@ export default function GenerateStorefront() {
                       <Button
                         type="button"
                         size="sm"
-                        disabled={isAttachingAddon}
-                        onClick={() => setIsAttachConfirmOpen(true)}
+                        onClick={() => setIsAttachAddonModalOpen(true)}
                         className="h-7 px-3 text-[11px] font-semibold bg-amber-600 hover:bg-amber-700 text-white gap-1.5 rounded-lg"
                       >
                         <Sparkles className="w-3.5 h-3.5" />
-                        {isAttachingAddon ? "Attaching Add-On..." : "Attach Ecommerce Add-On (Complimentary)"}
+                        Attach Ecommerce Add-On...
                       </Button>
                       <span className="text-[10px] text-muted-foreground">
                         or proceed — generated storefront will start as Unpublished
@@ -992,65 +1002,58 @@ export default function GenerateStorefront() {
                   </p>
                 </div>
 
-                {/* Production URL */}
-                <div className="p-4 bg-muted/40 border border-border/80 rounded-2xl max-w-lg mx-auto flex items-center justify-between gap-3">
-                  <div className="text-left min-w-0 flex-1">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">🌐 Production URL</p>
-                    <a
-                      href={deployedResult.storefront_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-mono font-bold text-primary hover:underline truncate block"
-                    >
-                      {deployedResult.storefront_url}
-                    </a>
+                {/* Storefront Link Card */}
+                <div className="p-5 bg-card border border-border rounded-2xl max-w-lg mx-auto text-left space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Storefront Address</span>
+                      <p className="text-xs font-mono font-bold text-foreground">
+                        {deployedResult.subdomain || subdomain}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] font-semibold capitalize bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+                      Active Deployment
+                    </Badge>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(deployedResult.storefront_url);
-                      toast.success('Storefront URL copied!');
-                    }}
-                    className="h-8 px-3 rounded-lg text-xs font-semibold gap-1 shrink-0"
-                  >
-                    <Copy className="h-3.5 w-3.5" /> Copy
-                  </Button>
-                </div>
 
-                {/* Local dev test links */}
-                <div className="p-4 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/30 rounded-2xl max-w-lg mx-auto text-left space-y-3">
-                  <p className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-400 tracking-wider">🔧 Local Dev Testing (port 5175)</p>
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <code className="text-[11px] font-mono text-amber-800 dark:text-amber-300 truncate">
-                        {`http://localhost:5175/?tenant=${selectedTenant?.slug}`}
-                      </code>
+                    <span className="text-[11px] text-muted-foreground">Live Subdomain URL:</span>
+                    <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-muted/40 border border-border/70">
+                      <a
+                        href={deployedResult.storefront_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-mono font-bold text-primary hover:underline truncate block"
+                        title={deployedResult.storefront_url}
+                      >
+                        {deployedResult.storefront_url}
+                      </a>
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => window.open(`http://localhost:5175/?tenant=${selectedTenant?.slug}`, '_blank')}
-                        className="h-7 px-2 rounded-lg text-[10px] font-semibold gap-1 shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100"
+                        variant="ghost"
+                        onClick={() => {
+                          navigator.clipboard.writeText(deployedResult.storefront_url);
+                          toast.success('Storefront URL copied!');
+                        }}
+                        className="h-7 px-2 text-xs font-semibold gap-1 shrink-0"
+                        title="Copy live URL"
                       >
-                        <ExternalLink className="h-3 w-3" /> Open
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <code className="text-[11px] font-mono text-amber-800 dark:text-amber-300 truncate">
-                        {`http://${selectedTenant?.slug}.localhost:5175`}
-                      </code>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => window.open(`http://${selectedTenant?.slug}.localhost:5175`, '_blank')}
-                        className="h-7 px-2 rounded-lg text-[10px] font-semibold gap-1 shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100"
-                      >
-                        <ExternalLink className="h-3 w-3" /> Open
+                        <Copy className="h-3.5 w-3.5" /> Copy
                       </Button>
                     </div>
                   </div>
-                  <p className="text-[10px] text-amber-600 dark:text-amber-500">
-                    Subdomain URL works in Chrome & Edge only (RFC 6761). Query param works in all browsers.
-                  </p>
+
+                  {deployedResult.custom_domain && (
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <span className="text-muted-foreground">Custom Domain:</span>
+                      <span className="font-mono font-medium text-foreground">{deployedResult.custom_domain}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-border/40">
+                    <span className="text-muted-foreground">Active Template:</span>
+                    <span className="font-semibold text-foreground capitalize">{activeTemplate.name}</span>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-center gap-3 pt-4">
@@ -1065,7 +1068,7 @@ export default function GenerateStorefront() {
                     onClick={() => window.open(deployedResult.storefront_url, '_blank')}
                     className="rounded-xl text-xs font-bold h-10 px-6 gap-2"
                   >
-                    <ExternalLink className="h-4 w-4" /> Open Production Store
+                    <ExternalLink className="h-4 w-4" /> Open Storefront
                   </Button>
                 </div>
               </div>
@@ -1082,16 +1085,22 @@ export default function GenerateStorefront() {
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label className="text-xs font-bold text-foreground">
-                      Live Storefront Address (Vercel Multi-Tenant)
+                      Storefront Subdomain Address <span className="text-rose-500">*</span>
                     </Label>
-                    <div className="p-3 bg-muted/40 border border-border/80 rounded-xl space-y-1">
-                      <p className="text-xs font-mono font-bold text-primary truncate">
-                        {liveStorefrontUrl}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        Automatically routes to {activeTemplate.name} with {selectedTenant?.business_name || 'merchant'} inventory.
-                      </p>
+                    <div className="flex items-center rounded-lg border border-border bg-background overflow-hidden focus-within:ring-0">
+                      <span className="px-3 py-2 text-xs font-mono text-muted-foreground bg-muted/40 border-r border-border select-none">
+                        {parsedBase.protocol}//
+                      </span>
+                      <Input
+                        value={subdomain}
+                        onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9.:-]/g, ''))}
+                        className="border-0 shadow-none text-xs font-bold text-foreground focus-visible:ring-0 rounded-none h-10"
+                        placeholder={parsedBase.isLocal ? "slug.localhost:5175" : "slug.domain.com"}
+                      />
                     </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Subdomain address derived from <code className="font-mono text-foreground font-semibold">{STOREFRONT_BASE_URL}</code>.
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -1105,6 +1114,25 @@ export default function GenerateStorefront() {
                     <p className="text-[11px] text-muted-foreground">
                       Attach a custom branded domain (e.g. CNAME pointing to Vercel).
                     </p>
+                  </div>
+
+                  {/* Subdomain Launch Endpoint Preview */}
+                  <div className="md:col-span-2 p-3 bg-muted/30 border border-border/70 rounded-xl flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground font-medium">Subdomain Endpoint:</span>
+                      <a
+                        href={subdomainUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-[11px] text-primary hover:underline font-semibold flex items-center gap-1 truncate max-w-md"
+                        title={subdomainUrl}
+                      >
+                        {subdomainUrl} <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+                      {activeTemplate.name}
+                    </span>
                   </div>
                 </div>
 
@@ -1164,18 +1192,14 @@ export default function GenerateStorefront() {
         )}
       </div>
 
-      <ConfirmDialog
-        isOpen={isAttachConfirmOpen}
-        onClose={() => setIsAttachConfirmOpen(false)}
-        onConfirm={async () => {
-          setIsAttachConfirmOpen(false);
-          await handleAttachEcommerceAddon();
+      <AttachAddonModal
+        isOpen={isAttachAddonModalOpen}
+        onClose={() => setIsAttachAddonModalOpen(false)}
+        tenant={selectedTenant as any}
+        initialAddonKey="ecommerce"
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['platform-tenants-list'] });
         }}
-        title={`Attach Ecommerce Add-On?`}
-        description={`This will attach the complimentary Ecommerce Add-on to ${selectedTenant?.business_name || 'this tenant'} (${selectedTenant?.plan || ''} plan), granting access to headless storefront creation and Paystack checkout.`}
-        confirmLabel="Attach Add-on"
-        isDanger={false}
-        isLoading={isAttachingAddon}
       />
     </PageLayout>
   );

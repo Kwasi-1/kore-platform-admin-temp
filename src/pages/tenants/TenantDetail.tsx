@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -43,7 +43,9 @@ import {
   Plus,
   Puzzle,
   Sparkles,
-  Layers
+  Layers,
+  Copy,
+  Check
 } from 'lucide-react';
 import { 
   DropdownMenu,
@@ -74,6 +76,15 @@ export default function TenantDetail() {
   // Generated Key Reveal
   const [newApiKey, setNewApiKey] = useState('');
   const [isTogglingAddon, setIsTogglingAddon] = useState(false);
+  const [hasCopiedSubdomain, setHasCopiedSubdomain] = useState(false);
+
+  const handleCopySubdomain = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setHasCopiedSubdomain(true);
+    toast.success('Subdomain copied to clipboard');
+    setTimeout(() => setHasCopiedSubdomain(false), 2000);
+  };
+
   const [addonConfirm, setAddonConfirm] = useState<{
     isOpen: boolean;
     type: 'attach' | 'detach';
@@ -155,6 +166,17 @@ export default function TenantDetail() {
   }
 
   const { tenant, metrics, owner, recent_transactions, storefront_deployment, staff } = serverDetailData;
+  const defaultSubdomain = (() => {
+    if (!tenant) return '';
+    const base = (import.meta as any).env?.VITE_STOREFRONT_BASE_URL || 'http://localhost:5175';
+    try {
+      const u = new URL(base);
+      const isLocal = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+      return isLocal ? `${tenant.slug}.localhost${u.port ? `:${u.port}` : ':5175'}` : `${tenant.slug}.${u.host}`;
+    } catch {
+      return `${tenant.slug}.localhost:5175`;
+    }
+  })();
   const addonsList = (serverDetailData.addons || []) as TenantAddon[];
   const isIncludedInPlan = ['business', 'ecom_only', 'ecommerce_only', 'full_suite'].includes(
     (tenant?.plan || '').toLowerCase()
@@ -660,29 +682,81 @@ export default function TenantDetail() {
           
           {/* Storefront Deployment Card */}
           <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header pb-2 border-b border-border">
-              Storefront Deployment
-            </h3>
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground font-header">
+                Storefront Deployment
+              </h3>
+              {storefront_deployment && (
+                <div className="flex items-center gap-1.5">
+                  <Badge variant={storefront_deployment.status === 'published' || storefront_deployment.status === 'active' ? 'success' : 'secondary'} className="text-[10px] capitalize">
+                    {storefront_deployment.status || 'Active'}
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => navigate(`/storefronts/generate?tenant_id=${tenant.id}`)}
+                    className="h-6 px-2 text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                    title="Reconfigure or edit storefront theme"
+                  >
+                    <Edit3 className="h-3 w-3 mr-1" /> Reconfigure
+                  </Button>
+                </div>
+              )}
+            </div>
 
             {storefront_deployment ? (
               <div className="space-y-3 text-xs">
+                {/* Production Subdomain */}
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Live Endpoint:</span>
+                  <span className="text-muted-foreground">Store Subdomain:</span>
+                  <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <span className="font-mono text-xs bg-muted/40 px-2 py-0.5 rounded border border-border/60 text-foreground">
+                      {storefront_deployment.subdomain || defaultSubdomain}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopySubdomain(storefront_deployment.subdomain || defaultSubdomain)}
+                      className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors"
+                      title="Copy store subdomain"
+                    >
+                      {hasCopiedSubdomain ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Custom Domain */}
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Custom Domain:</span>
+                  <span className="font-medium text-foreground font-mono">
+                    {storefront_deployment.custom_domain || 'None Configured'}
+                  </span>
+                </div>
+
+                {/* Storefront Link */}
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Storefront Link:</span>
                   <a 
                     href={storefront_deployment.vercel_url}
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline font-semibold flex items-center gap-1"
+                    className="text-primary hover:underline font-semibold flex items-center gap-1 font-mono text-[11px] truncate max-w-[230px]"
+                    title={storefront_deployment.vercel_url}
                   >
-                    {storefront_deployment.vercel_url} <ExternalLink className="h-3 w-3" />
+                    {storefront_deployment.vercel_url} <ExternalLink className="h-3 w-3 shrink-0" />
                   </a>
                 </div>
+
+                {/* Theme Name */}
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Template ID:</span>
-                  <span className="font-semibold text-foreground">{storefront_deployment.template_name}</span>
+                  <span className="text-muted-foreground">Active Template:</span>
+                  <span className="font-semibold text-foreground capitalize">
+                    {storefront_deployment.template_name?.replace(/-/g, ' ')}
+                  </span>
                 </div>
+
+                {/* Deployed Date */}
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Deployed At:</span>
+                  <span className="text-muted-foreground">Last Deployed:</span>
                   <span className="font-semibold text-foreground">{formatDateTime(storefront_deployment.deployed_at)}</span>
                 </div>
               </div>
@@ -690,9 +764,14 @@ export default function TenantDetail() {
               <div className="py-6 text-center space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">No storefront generated yet</p>
                 <p className="text-[11px] text-muted-foreground/70 max-w-xs mx-auto">
-                  Provision a headless Vue/React storefront for this tenant.
+                  Provision an AI-powered storefront for this tenant.
                 </p>
-                <Button variant="outline" size="sm" className="mt-2 text-xs h-8">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate(`/storefronts/generate?tenant_id=${tenant.id}`)}
+                  className="mt-2 text-xs h-8"
+                >
                   <Globe className="h-3.5 w-3.5 mr-1" /> Generate Storefront
                 </Button>
               </div>

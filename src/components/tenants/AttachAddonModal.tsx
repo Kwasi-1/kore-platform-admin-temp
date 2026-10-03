@@ -26,7 +26,8 @@ interface AttachAddonModalProps {
   isOpen: boolean;
   onClose: () => void;
   tenant: (Tenant & { api_key_prefix?: string }) | null;
-  currentAddons: TenantAddon[];
+  currentAddons?: TenantAddon[];
+  initialAddonKey?: string;
   onSuccess?: () => void;
 }
 
@@ -34,7 +35,8 @@ export const AttachAddonModal: React.FC<AttachAddonModalProps> = ({
   isOpen,
   onClose,
   tenant,
-  currentAddons,
+  currentAddons = [],
+  initialAddonKey,
   onSuccess,
 }) => {
   const queryClient = useQueryClient();
@@ -42,12 +44,23 @@ export const AttachAddonModal: React.FC<AttachAddonModalProps> = ({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedAddonKey, setSelectedAddonKey] = useState<string | null>(null);
+  const [selectedAddonKey, setSelectedAddonKey] = useState<string | null>(initialAddonKey || null);
 
   // Form customisation state
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly' | 'complimentary' | 'one_time'>('monthly');
   const [customPrice, setCustomPrice] = useState<number>(0);
   const [status, setStatus] = useState<'active' | 'trial'>('active');
+
+  React.useEffect(() => {
+    if (isOpen && initialAddonKey) {
+      const def = GLOBAL_ADDONS_CATALOG.find((a) => a.key === initialAddonKey);
+      if (def) {
+        setSelectedAddonKey(def.key);
+        setCustomPrice(def.priceMonthly);
+        setBillingCycle(def.billingCycle || 'monthly');
+      }
+    }
+  }, [isOpen, initialAddonKey]);
 
   const activeAddonKeys = useMemo(() => {
     return new Set(
@@ -130,6 +143,7 @@ export const AttachAddonModal: React.FC<AttachAddonModalProps> = ({
       );
       queryClient.invalidateQueries({ queryKey: ['platform_tenant_detail', tenant?.id] });
       queryClient.invalidateQueries({ queryKey: ['platform_tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['platform-tenants-list'] });
       if (onSuccess) onSuccess();
       handleClose();
     },

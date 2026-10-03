@@ -151,6 +151,9 @@ export interface TenantDetailResponse {
   }[];
   storefront_deployment?: {
     vercel_url: string;
+    subdomain?: string;
+    custom_domain?: string | null;
+    status?: string;
     template_name: string;
     deployed_at: string;
   };
