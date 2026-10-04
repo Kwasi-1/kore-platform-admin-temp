@@ -452,8 +452,22 @@ export interface GeneratedStorefrontContent {
   };
   about: {
     title: string;
+    subtitle?: string;
+    founder_story?: string;
     story: string;
-    values: string[];
+    heritage_title?: string;
+    heritage_text?: string;
+    commitment_text?: string;
+    craft_title?: string;
+    sustainability_title?: string;
+    values: (string | { title: string; description: string })[];
+  };
+  contact?: {
+    phone?: string;
+    email?: string;
+    address?: string;
+    whatsapp?: string;
+    instagram?: string;
   };
   features: {
     icon: string;
@@ -472,13 +486,74 @@ export interface GeneratedStorefrontContent {
   };
 }
 
+export interface TenantCatalogSummary {
+  tenant_id: string;
+  business_name: string;
+  slug: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  total_products: number;
+  categories: { name: string; count: number }[];
+  top_products: {
+    id: string;
+    name: string;
+    category?: string;
+    description?: string;
+    price?: number;
+    thumbnail?: string;
+    soldCount?: number;
+    isFeatured?: boolean;
+    is_available_online?: boolean;
+  }[];
+}
+
+export const getTenantCatalogSummary = async (tenantId: string): Promise<TenantCatalogSummary> => {
+  const { data } = await apiClient.get<any>(`/api/v1/platform/generate/tenant-catalog-summary/${tenantId}`);
+  return data?.success?.data;
+};
+
+export interface ExtractCopyPayload {
+  text_content: string;
+  business_name?: string;
+  industry?: string;
+  tone?: string;
+  primary_color?: string;
+  catalog_scope?: any;
+  contact_info?: {
+    phone?: string;
+    email?: string;
+    address?: string;
+    whatsapp?: string;
+    instagram?: string;
+  };
+}
+
+export const extractStorefrontCopy = async (payload: ExtractCopyPayload) => {
+  const { data } = await apiClient.post<any>('/api/v1/platform/generate/extract-copy', payload);
+  return data?.success?.data as {
+    extracted_content: GeneratedStorefrontContent;
+    model_used: string;
+  };
+};
+
 export interface GenerateStorefrontPreviewPayload {
+  tenant_id?: string;
   business_name: string;
   industry: string;
   tagline?: string;
   primary_color?: string;
   target_audience?: string;
   about_notes?: string;
+  tone?: string;
+  catalog_scope?: any;
+  contact_info?: {
+    phone?: string;
+    email?: string;
+    address?: string;
+    whatsapp?: string;
+    instagram?: string;
+  };
 }
 
 export interface GenerateStorefrontPayload {
@@ -493,6 +568,16 @@ export interface GenerateStorefrontPayload {
   override_content?: GeneratedStorefrontContent;
   target_audience?: string;
   about_notes?: string;
+  tone?: string;
+  catalog_scope?: any;
+  apply_catalog_scope?: boolean;
+  contact_info?: {
+    phone?: string;
+    email?: string;
+    address?: string;
+    whatsapp?: string;
+    instagram?: string;
+  };
 }
 
 export const previewAIStorefrontContent = async (payload: GenerateStorefrontPreviewPayload) => {

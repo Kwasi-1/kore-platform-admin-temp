@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -6,7 +6,10 @@ import {
   Tenant, 
   previewAIStorefrontContent, 
   generateAndDeployStorefront, 
-  GeneratedStorefrontContent
+  GeneratedStorefrontContent,
+  getTenantCatalogSummary,
+  TenantCatalogSummary,
+  extractStorefrontCopy
 } from '@/api/platform';
 import { AttachAddonModal } from '@/components/tenants/AttachAddonModal';
 import PageLayout from '@/components/layout/PageLayout';
@@ -43,10 +46,19 @@ import {
   CheckCircle,
   HelpCircle,
   Zap,
-  Tag
+  Tag,
+  UploadCloud,
+  FileText,
+  Sliders,
+  CheckSquare,
+  Square,
+  Phone,
+  Mail,
+  MapPin,
+  Instagram,
+  CheckCheck
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import clsx from 'clsx';
 
 const INDUSTRIES = [
@@ -57,6 +69,13 @@ const INDUSTRIES = [
   { id: 'Groceries & FMCG', label: 'Groceries & FMCG', icon: Store, defaultTemplate: 'vetshore-retail', color: '#10b981' },
   { id: 'Beauty & Cosmetics', label: 'Beauty & Cosmetics', icon: Sparkles, defaultTemplate: 'linea-luxury', color: '#f43f5e' },
   { id: 'General Retail', label: 'General Retail', icon: Tag, defaultTemplate: 'vetshore-retail', color: '#0ea5e9' },
+];
+
+const BRAND_TONES = [
+  { id: 'Luxury Editorial', label: 'Luxury Editorial', desc: 'Artisanal, refined, sophisticated storytelling' },
+  { id: 'Bold & Streetwear', label: 'Bold & Streetwear', desc: 'Punchy, high-energy, contemporary statement copy' },
+  { id: 'Warm & Friendly', label: 'Warm & Friendly', desc: 'Approachable, caring, community-centered and welcoming' },
+  { id: 'Modern Minimalist', label: 'Modern Minimalist', desc: 'Clean, understated, functional, essentialist' },
 ];
 
 const COLOR_PRESETS = [
@@ -137,17 +156,25 @@ export default function GenerateStorefront() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const preselectedTenantId = searchParams.get('tenant_id');
 
-  // Wizard Step State (1: Brand, 2: Template, 3: AI Copy, 4: Live Preview, 5: Deploy)
+  // Wizard Step State (1: Brand & Scope, 2: AI Copy & Story, 3: Live Preview, 4: Launch)
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+
+  // Step 1 Ingestion Mode Tab ('survey' | 'document')
+  const [ingestionTab, setIngestionTab] = useState<'survey' | 'document'>('survey');
+  const [rawDocumentText, setRawDocumentText] = useState<string>('');
+  const [uploadedDocName, setUploadedDocName] = useState<string>('');
+  const [isExtractingDocument, setIsExtractingDocument] = useState<boolean>(false);
 
   // Form State
   const [selectedTenantId, setSelectedTenantId] = useState<string>(preselectedTenantId || '');
   const [businessName, setBusinessName] = useState<string>('');
   const [industry, setIndustry] = useState<string>('Jewelry & Luxury');
+  const [brandTone, setBrandTone] = useState<string>('Luxury Editorial');
   const [tagline, setTagline] = useState<string>('');
   const [primaryColor, setPrimaryColor] = useState<string>('#D4AF37');
   const [targetAudience, setTargetAudience] = useState<string>('');
@@ -155,6 +182,20 @@ export default function GenerateStorefront() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('linea-luxury');
   const [subdomain, setSubdomain] = useState<string>('');
   const [customDomain, setCustomDomain] = useState<string>('');
+
+  // Catalog Scoping State
+  const [catalogSummary, setCatalogSummary] = useState<TenantCatalogSummary | null>(null);
+  const [catalogScopeType, setCatalogScopeType] = useState<'all' | 'categories' | 'flagship'>('all');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedFlagshipIds, setSelectedFlagshipIds] = useState<string[]>([]);
+  const [applyCatalogScope, setApplyCatalogScope] = useState<boolean>(true);
+
+  // Contact Info State
+  const [contactPhone, setContactPhone] = useState<string>('');
+  const [contactEmail, setContactEmail] = useState<string>('');
+  const [contactAddress, setContactAddress] = useState<string>('');
+  const [contactWhatsapp, setContactWhatsapp] = useState<string>('');
+  const [contactInstagram, setContactInstagram] = useState<string>('');
 
   // AI Content State
   const [aiContent, setAiContent] = useState<GeneratedStorefrontContent | null>(null);
@@ -188,13 +229,11 @@ export default function GenerateStorefront() {
 
   const liveStorefrontUrl = useMemo(() => {
     const slug = selectedTenant?.slug || 'my-store';
-    // iframe uses ?tenant= query param (reliable in cross-origin iframe context)
     return `${activeTemplate.baseUrl}/?tenant=${slug}&theme=${activeTemplate.id}&preview=true`;
   }, [activeTemplate, selectedTenant]);
 
   const parsedBase = useMemo(() => parseStorefrontBase(STOREFRONT_BASE_URL), []);
 
-  // Subdomain URL — what the merchant actually browses in a real tab.
   const subdomainUrl = useMemo(() => {
     const rawSub = subdomain || selectedTenant?.slug || 'my-store';
     const sub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
@@ -204,7 +243,7 @@ export default function GenerateStorefront() {
     return `${parsedBase.protocol}//${sub}.${parsedBase.host}/?theme=${activeTemplate.id}`;
   }, [parsedBase, subdomain, selectedTenant, activeTemplate]);
 
-  // Auto-populate business name & slug when tenant is selected
+  // Load tenant catalog summary & populate contact defaults when selected
   useEffect(() => {
     if (selectedTenant) {
       setBusinessName(selectedTenant.business_name || '');
@@ -214,10 +253,100 @@ export default function GenerateStorefront() {
       } else {
         setSubdomain(`${slug}.${parsedBase.host}`);
       }
+
+      // Fetch POS Catalog summary
+      getTenantCatalogSummary(selectedTenant.id)
+        .then((summary) => {
+          if (summary) {
+            setCatalogSummary(summary);
+            // Default selected categories to all available categories
+            setSelectedCategories(summary.categories.map((c) => c.name));
+            // Pre-fill contacts if present
+            if (summary.phone && !contactPhone) {
+              setContactPhone(summary.phone);
+              setContactWhatsapp(summary.phone);
+            }
+            if (summary.email && !contactEmail) {
+              setContactEmail(summary.email);
+            }
+            if (summary.address && !contactAddress) {
+              setContactAddress(summary.address);
+            }
+            if (!contactInstagram) {
+              setContactInstagram(`@${selectedTenant.slug}`);
+            }
+          }
+        })
+        .catch((err) => console.warn('Could not load tenant catalog summary:', err));
     }
   }, [selectedTenant, parsedBase]);
 
-  // Handle AI Content Generation
+  // Handle Multi-modal Document file upload (TXT, MD, PDF text)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadedDocName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (text) {
+        setRawDocumentText(text);
+        toast.success(`Loaded document "${file.name}" (${Math.round(text.length / 1024)} KB)`);
+      }
+    };
+    reader.onerror = () => {
+      toast.error('Could not read the uploaded document');
+    };
+    reader.readAsText(file);
+  };
+
+  // Handle Gemini Extraction from Document
+  const handleExtractFromDocument = async () => {
+    if (!rawDocumentText.trim()) {
+      toast.error('Please enter or paste your brand notes or upload a document first');
+      return;
+    }
+
+    setIsExtractingDocument(true);
+    try {
+      const res = await extractStorefrontCopy({
+        text_content: rawDocumentText,
+        business_name: businessName || selectedTenant?.business_name,
+        industry,
+        tone: brandTone,
+        primary_color: primaryColor,
+        catalog_scope: {
+          type: catalogScopeType,
+          selected_categories: selectedCategories,
+        },
+        contact_info: {
+          phone: contactPhone || undefined,
+          email: contactEmail || undefined,
+          address: contactAddress || undefined,
+          whatsapp: contactWhatsapp || undefined,
+          instagram: contactInstagram || undefined,
+        },
+      });
+
+      setAiContent(res.extracted_content);
+      if (res.extracted_content.contact) {
+        if (res.extracted_content.contact.phone) setContactPhone(res.extracted_content.contact.phone);
+        if (res.extracted_content.contact.email) setContactEmail(res.extracted_content.contact.email);
+        if (res.extracted_content.contact.address) setContactAddress(res.extracted_content.contact.address);
+        if (res.extracted_content.contact.whatsapp) setContactWhatsapp(res.extracted_content.contact.whatsapp);
+        if (res.extracted_content.contact.instagram) setContactInstagram(res.extracted_content.contact.instagram);
+      }
+      toast.success('✨ Brand copy extracted and structured by Gemini AI!');
+    } catch (err: any) {
+      console.error('Failed to extract copy:', err);
+      toast.error(err?.response?.data?.error?.message || 'Failed to extract copy from document');
+    } finally {
+      setIsExtractingDocument(false);
+    }
+  };
+
+  // Handle Standard AI Content Generation
   const handleGenerateAI = async () => {
     if (!businessName.trim()) {
       toast.error('Please enter a business name first');
@@ -227,12 +356,26 @@ export default function GenerateStorefront() {
     setIsGeneratingAI(true);
     try {
       const res = await previewAIStorefrontContent({
+        tenant_id: selectedTenantId || undefined,
         business_name: businessName,
         industry,
         tagline: tagline || undefined,
         primary_color: primaryColor,
         target_audience: targetAudience || undefined,
         about_notes: aboutNotes || undefined,
+        tone: brandTone,
+        catalog_scope: {
+          type: catalogScopeType,
+          selected_categories: selectedCategories,
+          selected_product_ids: selectedFlagshipIds,
+        },
+        contact_info: {
+          phone: contactPhone || undefined,
+          email: contactEmail || undefined,
+          address: contactAddress || undefined,
+          whatsapp: contactWhatsapp || undefined,
+          instagram: contactInstagram || undefined,
+        },
       });
 
       setAiContent(res.generated_content);
@@ -278,7 +421,37 @@ export default function GenerateStorefront() {
       override_content: aiContent || undefined,
       target_audience: targetAudience || undefined,
       about_notes: aboutNotes || undefined,
+      tone: brandTone,
+      catalog_scope: {
+        type: catalogScopeType,
+        selected_categories: selectedCategories,
+        selected_product_ids: selectedFlagshipIds,
+      },
+      apply_catalog_scope: applyCatalogScope,
+      contact_info: {
+        phone: contactPhone,
+        email: contactEmail,
+        address: contactAddress,
+        whatsapp: contactWhatsapp,
+        instagram: contactInstagram,
+      },
     });
+  };
+
+  const toggleCategorySelection = (catName: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(catName) ? prev.filter((c) => c !== catName) : [...prev, catName]
+    );
+  };
+
+  const selectAllCategories = () => {
+    if (catalogSummary?.categories) {
+      setSelectedCategories(catalogSummary.categories.map((c) => c.name));
+    }
+  };
+
+  const clearAllCategories = () => {
+    setSelectedCategories([]);
   };
 
   // Step validation
@@ -288,7 +461,7 @@ export default function GenerateStorefront() {
   return (
     <PageLayout
       title="AI Storefront Generator"
-      subtitle="Provision customized, high-converting digital storefronts for business tenants in seconds."
+      subtitle="Provision customized, high-converting digital storefronts with multi-modal copy ingestion and omnichannel catalog scoping."
       showBackButton={true}
       backUrl="/storefronts"
       actions={
@@ -300,15 +473,15 @@ export default function GenerateStorefront() {
           <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Back to Storefronts
         </Button>
       }
-      className='max-w-4xl mx-auto'
+      className="max-w-4xl mx-auto"
     >
-      <div className=" space-y-8 pb-12">
+      <div className="space-y-8 pb-12">
         {/* Step Progress Bar */}
         <div className="bg-card border border-border/80 rounded-2xl p-4 md:p-6 shadow-xs">
           <div className="flex items-center justify-between">
             {[
-              { num: 1, title: 'Brand & Template', icon: Store },
-              { num: 2, title: 'AI Copy & SEO', icon: Sparkles },
+              { num: 1, title: 'Brand & Scope', icon: Store },
+              { num: 2, title: 'AI Copy & Story', icon: Sparkles },
               { num: 3, title: 'Live Preview', icon: Monitor },
               { num: 4, title: 'Launch', icon: CheckCircle2 },
             ].map((step, idx) => {
@@ -365,14 +538,14 @@ export default function GenerateStorefront() {
         </div>
 
         {/* ========================================================================= */}
-        {/* STEP 1: Tenant & Brand Setup                                              */}
+        {/* STEP 1: Tenant, Ingestion, Catalog Scope & Template                       */}
         {/* ========================================================================= */}
         {currentStep === 1 && (
-          <div className="bg-card border border-border/80 rounded-2xl p-6 md:p-8 space-y-6 shadow-xs">
+          <div className="bg-card border border-border/80 rounded-2xl p-6 md:p-8 space-y-7 shadow-xs">
             <div className="border-b border-border/60 pb-4">
-              <h3 className="text-lg font-bold font-header text-foreground">1. Tenant & Storefront Template</h3>
+              <h3 className="text-lg font-bold font-header text-foreground">1. Tenant, Brand & Catalog Scoping</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Select the merchant, pick their storefront architecture theme, and define their brand identity.
+                Connect the physical POS merchant, configure which collections are sold online, and provide brand context.
               </p>
             </div>
 
@@ -496,7 +669,6 @@ export default function GenerateStorefront() {
                             : 'border-border/70 hover:border-foreground/30 bg-card'
                         )}
                       >
-                        {/* Header & Badges */}
                         <div className="space-y-2">
                           <div className="flex items-start justify-between gap-2">
                             <div>
@@ -520,7 +692,6 @@ export default function GenerateStorefront() {
                           <p className="text-xs text-muted-foreground leading-relaxed">{tmpl.description}</p>
                         </div>
 
-                        {/* Features highlights */}
                         <div className="space-y-1.5 pt-3 border-t border-border/40">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/80">Key Capabilities</p>
                           <ul className="space-y-1 text-[11px] text-muted-foreground">
@@ -538,17 +709,313 @@ export default function GenerateStorefront() {
                 </div>
               </div>
 
-              {/* Industry / Niche Context for AI */}
+              {/* Omnichannel Catalog Scope Box */}
+              <div className="space-y-3 md:col-span-2 p-5 bg-card border border-border/80 rounded-2xl shadow-xs">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-bold font-header text-foreground flex items-center gap-2">
+                      <Sliders className="h-4 w-4 text-primary" /> Omnichannel Catalog Scoping
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Scope which POS inventory is sold online. In-store only items (e.g. repairs, fragile goods) will be shielded from the storefront.
+                    </p>
+                  </div>
+                  {catalogSummary && (
+                    <Badge variant="secondary" className="text-[10px] font-mono">
+                      {catalogSummary.total_products} POS Products Available
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3 pt-2">
+                  {[
+                    { id: 'all', title: 'Full Catalog', desc: 'All active items available online' },
+                    { id: 'categories', title: 'Select Categories', desc: 'Curate specific online collections' },
+                    { id: 'flagship', title: 'Flagship Items', desc: 'Top star products only' },
+                  ].map((mode) => (
+                    <div
+                      key={mode.id}
+                      onClick={() => setCatalogScopeType(mode.id as any)}
+                      className={clsx(
+                        'p-3.5 rounded-xl border cursor-pointer transition-all space-y-1',
+                        catalogScopeType === mode.id
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                          : 'border-border/70 hover:border-foreground/30 bg-muted/20'
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-foreground">{mode.title}</p>
+                        <div
+                          className={clsx(
+                            'h-4 w-4 rounded-full border flex items-center justify-center',
+                            catalogScopeType === mode.id ? 'border-primary bg-primary text-white' : 'border-border'
+                          )}
+                        >
+                          {catalogScopeType === mode.id && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-tight">{mode.desc}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Category Selection Pills */}
+                {catalogScopeType === 'categories' && (
+                  <div className="space-y-2.5 pt-3 border-t border-border/50">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[11px] font-bold text-foreground">
+                        Select Categories for Online Store:
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={selectAllCategories}
+                          className="text-[10px] text-primary hover:underline font-semibold"
+                        >
+                          Select All
+                        </button>
+                        <span className="text-[10px] text-muted-foreground">&middot;</span>
+                        <button
+                          type="button"
+                          onClick={clearAllCategories}
+                          className="text-[10px] text-muted-foreground hover:text-foreground font-semibold"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    {catalogSummary && catalogSummary.categories.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {catalogSummary.categories.map((cat) => {
+                          const isChecked = selectedCategories.includes(cat.name);
+                          return (
+                            <button
+                              key={cat.name}
+                              type="button"
+                              onClick={() => toggleCategorySelection(cat.name)}
+                              className={clsx(
+                                'px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border',
+                                isChecked
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 shadow-2xs'
+                                  : 'bg-muted/30 text-muted-foreground border-border/60 hover:border-foreground/30'
+                              )}
+                            >
+                              {isChecked ? (
+                                <CheckSquare className="h-3.5 w-3.5 text-emerald-500" />
+                              ) : (
+                                <Square className="h-3.5 w-3.5 text-muted-foreground/60" />
+                              )}
+                              <span>{cat.name}</span>
+                              <span className="text-[10px] font-mono opacity-70">({cat.count})</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        {isLoadingTenants ? 'Scanning categories...' : 'No distinct categories found in POS products. Categories will be auto-generated.'}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Flagship Selection Pills */}
+                {catalogScopeType === 'flagship' && catalogSummary && (
+                  <div className="space-y-2 pt-3 border-t border-border/50">
+                    <Label className="text-[11px] font-bold text-foreground">Top Star Products in POS:</Label>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {catalogSummary.top_products.slice(0, 6).map((prod) => (
+                        <div key={prod.id} className="p-2 rounded-lg bg-muted/30 border border-border/60 flex items-center justify-between text-xs">
+                          <span className="font-semibold text-foreground truncate">{prod.name}</span>
+                          <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+                            {prod.category || 'General'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+                  <input
+                    type="checkbox"
+                    id="applyCatalogScopeCheckbox"
+                    checked={applyCatalogScope}
+                    onChange={(e) => setApplyCatalogScope(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-border text-primary cursor-pointer"
+                  />
+                  <label htmlFor="applyCatalogScopeCheckbox" className="text-[11px] text-muted-foreground cursor-pointer select-none">
+                    Automatically update sales channel flag on deployment (Unselected items will be set to <strong className="text-foreground">In-Store Only</strong>).
+                  </label>
+                </div>
+              </div>
+
+              {/* Multi-Modal Brand Copy Ingestion Tabs */}
+              <div className="space-y-3 md:col-span-2 p-5 bg-card border border-border/80 rounded-2xl shadow-xs">
+                <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                  <div>
+                    <h4 className="text-sm font-bold font-header text-foreground flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" /> Brand Copy Ingestion Mode
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Upload your client's existing brand brief/document or complete a quick guided questionnaire.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border border-border/60">
+                    <button
+                      type="button"
+                      onClick={() => setIngestionTab('survey')}
+                      className={clsx(
+                        'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all',
+                        ingestionTab === 'survey' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      Guided Survey
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIngestionTab('document')}
+                      className={clsx(
+                        'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1',
+                        ingestionTab === 'document' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <UploadCloud className="h-3 w-3" /> Upload Document
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tab A: Guided Survey */}
+                {ingestionTab === 'survey' ? (
+                  <div className="space-y-4 pt-1">
+                    {/* Brand Tone Selector */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-foreground">Brand Editorial Tone</Label>
+                      <div className="grid gap-2.5 sm:grid-cols-2">
+                        {BRAND_TONES.map((tone) => (
+                          <div
+                            key={tone.id}
+                            onClick={() => setBrandTone(tone.id)}
+                            className={clsx(
+                              'p-3 rounded-xl border cursor-pointer transition-all space-y-0.5',
+                              brandTone === tone.id
+                                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                : 'border-border/70 hover:border-foreground/30 bg-muted/20'
+                            )}
+                          >
+                            <p className="text-xs font-bold text-foreground">{tone.label}</p>
+                            <p className="text-[11px] text-muted-foreground">{tone.desc}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Target Audience */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-foreground">Target Audience & Customer Profile</Label>
+                      <Input
+                        value={targetAudience}
+                        onChange={(e) => setTargetAudience(e.target.value)}
+                        placeholder="e.g. Modern couples, bridal shoppers, and fine jewelry collectors in Greater Accra"
+                        className="rounded-xl h-10 text-xs font-medium"
+                      />
+                    </div>
+
+                    {/* Brand Notes */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-foreground">
+                        Founder Story & Brand Notes <span className="text-[10px] text-muted-foreground font-normal">(Fed into Gemini AI)</span>
+                      </Label>
+                      <Textarea
+                        value={aboutNotes}
+                        onChange={(e) => setAboutNotes(e.target.value)}
+                        placeholder="e.g. Handcrafted in our Osu studio using ethically sourced Ghanaian gold. We offer bespoke wedding bands, complimentary lifetime polishing, and same-day courier dispatch."
+                        className="rounded-xl text-xs resize-none h-20"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  /* Tab B: Document Upload / Ingestion */
+                  <div className="space-y-4 pt-1">
+                    <div className="border-2 border-dashed border-border/80 rounded-2xl p-5 text-center space-y-2 bg-muted/10 hover:border-primary/50 transition-colors">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".txt,.md,.doc,.docx,.pdf,.json"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      <FileText className="h-8 w-8 text-primary mx-auto opacity-80" />
+                      <div>
+                        <p className="text-xs font-bold text-foreground">
+                          {uploadedDocName ? `Loaded: ${uploadedDocName}` : 'Upload Client Brand Brief or Notes'}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Accepts TXT, Markdown, or pasted company bio / Instagram profile.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="rounded-xl text-xs h-8 gap-1.5 border-border"
+                      >
+                        <UploadCloud className="h-3.5 w-3.5" /> Choose File...
+                      </Button>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-foreground">
+                        Or Paste Brand Document / Instagram Bio / Merchant Notes:
+                      </Label>
+                      <Textarea
+                        value={rawDocumentText}
+                        onChange={(e) => setRawDocumentText(e.target.value)}
+                        placeholder="Paste merchant's company profile, brand ethos, contact details, or product highlights here..."
+                        className="rounded-xl text-xs resize-none h-28 font-sans"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[11px] text-muted-foreground">
+                        {rawDocumentText.length > 0 ? `${rawDocumentText.length} characters ready` : 'No document pasted yet'}
+                      </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={isExtractingDocument || !rawDocumentText.trim()}
+                        onClick={handleExtractFromDocument}
+                        className="rounded-xl text-xs font-bold h-9 px-4 gap-2 bg-primary text-primary-foreground shadow-xs"
+                      >
+                        {isExtractingDocument ? (
+                          <>
+                            <Spinner /> Extracting with Gemini AI...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3.5 w-3.5" /> Extract Structured Copy with AI
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Industry / Niche Context */}
               <div className="space-y-2 md:col-span-2">
                 <Label className="text-xs font-bold text-foreground">
-                  Store Industry / Niche <span className="text-[10px] text-muted-foreground font-normal">(Provides domain context for Gemini AI brand copy)</span>
+                  Industry / Niche Classification
                 </Label>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <select
                     value={industry}
                     onChange={(e) => {
                       setIndustry(e.target.value);
-                      const matched = INDUSTRIES.find(i => i.id === e.target.value);
+                      const matched = INDUSTRIES.find((i) => i.id === e.target.value);
                       if (matched?.color) {
                         setPrimaryColor(matched.color);
                       }
@@ -570,6 +1037,66 @@ export default function GenerateStorefront() {
                       className="rounded-xl h-10 text-xs font-medium"
                     />
                   )}
+                </div>
+              </div>
+
+              {/* Store Contact & Customer Care Channels */}
+              <div className="space-y-3 md:col-span-2 p-5 bg-card border border-border/80 rounded-2xl shadow-xs">
+                <h4 className="text-sm font-bold font-header text-foreground flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-emerald-500" /> Store Contact & Customer Care Channels
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Populates the live storefront footer, navigation, and customer care page with real merchant contacts.
+                </p>
+
+                <div className="grid gap-3 sm:grid-cols-2 pt-1">
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                      <Phone className="h-3 w-3 text-muted-foreground" /> Phone Number
+                    </Label>
+                    <Input
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      placeholder="+233 24 123 4567"
+                      className="rounded-xl h-9 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                      <Mail className="h-3 w-3 text-muted-foreground" /> Store Email
+                    </Label>
+                    <Input
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      placeholder="orders@lineajewelry.com"
+                      className="rounded-xl h-9 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                      <MapPin className="h-3 w-3 text-muted-foreground" /> Storefront Address / Location
+                    </Label>
+                    <Input
+                      value={contactAddress}
+                      onChange={(e) => setContactAddress(e.target.value)}
+                      placeholder="14 Oxford Street, Osu, Accra"
+                      className="rounded-xl h-9 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                      <Instagram className="h-3 w-3 text-muted-foreground" /> Instagram Handle
+                    </Label>
+                    <Input
+                      value={contactInstagram}
+                      onChange={(e) => setContactInstagram(e.target.value)}
+                      placeholder="@lineajewelry"
+                      className="rounded-xl h-9 text-xs"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -602,19 +1129,6 @@ export default function GenerateStorefront() {
                   </div>
                 </div>
               </div>
-
-              {/* Target Audience / Context for AI */}
-              <div className="space-y-2 md:col-span-2">
-                <Label className="text-xs font-bold text-foreground">
-                  Target Audience & Brand Notes <span className="text-[10px] text-muted-foreground font-normal">(Fed into Gemini AI)</span>
-                </Label>
-                <Textarea
-                  value={aboutNotes}
-                  onChange={(e) => setAboutNotes(e.target.value)}
-                  placeholder="e.g. Modern boutique offering bespoke gold jewelry in Greater Accra. Free delivery, certified gold, and 100% handcrafted items."
-                  className="rounded-xl text-xs resize-none h-20"
-                />
-              </div>
             </div>
 
             <div className="flex justify-end pt-4 border-t border-border/60">
@@ -635,17 +1149,17 @@ export default function GenerateStorefront() {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 2: AI Copy & SEO Review                                              */}
+        {/* STEP 2: AI Copy, Story Narrative & SEO Review                             */}
         {/* ========================================================================= */}
         {currentStep === 2 && (
           <div className="bg-card border border-border/80 rounded-2xl p-6 md:p-8 space-y-6 shadow-xs">
             <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-4">
               <div>
                 <h3 className="text-lg font-bold font-header text-foreground flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary animate-pulse" /> 2. AI Content & SEO Customizer
+                  <Sparkles className="h-5 w-5 text-primary animate-pulse" /> 2. AI Brand Story, Copy & SEO Customizer
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Review and fine-tune Gemini-generated headlines, story narrative, and Google search metadata.
+                  Review and fine-tune Gemini-generated headlines, Our Story narrative, value pillars, and search metadata.
                 </p>
               </div>
 
@@ -666,7 +1180,7 @@ export default function GenerateStorefront() {
                 <Spinner />
                 <p className="text-sm font-bold text-foreground">Gemini AI is crafting brand copy for {businessName}...</p>
                 <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                  Generating high-converting hero headlines, artisanal brand narratives, trust badges, and SEO metadata.
+                  Synthesizing high-converting hero headlines, founder story, artisanal heritage narrative, and SEO metadata.
                 </p>
               </div>
             ) : aiContent ? (
@@ -739,31 +1253,64 @@ export default function GenerateStorefront() {
                   </div>
                 </div>
 
-                {/* About Section Copy Card */}
+                {/* About & Brand Story Section Card */}
                 <div className="bg-muted/30 border border-border/70 rounded-2xl p-5 space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                      <Heart className="h-4 w-4 text-rose-500" /> About Us & Brand Story
+                      <Heart className="h-4 w-4 text-rose-500" /> Our Story, Founder Vision & Heritage
                     </h4>
+                    <span className="text-[10px] text-muted-foreground font-mono">/about/our-story</span>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-bold text-foreground">Story Section Title</Label>
+                        <Input
+                          value={aiContent.about.title}
+                          onChange={(e) =>
+                            setAiContent({
+                              ...aiContent,
+                              about: { ...aiContent.about, title: e.target.value },
+                            })
+                          }
+                          className="h-9 text-xs font-semibold rounded-lg"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-bold text-foreground">Brand Ethos / Subtitle</Label>
+                        <Input
+                          value={aiContent.about.subtitle || ''}
+                          onChange={(e) =>
+                            setAiContent({
+                              ...aiContent,
+                              about: { ...aiContent.about, subtitle: e.target.value },
+                            })
+                          }
+                          placeholder="e.g. A journey of passion, artisanal craftsmanship, and timeless grace"
+                          className="h-9 text-xs rounded-lg"
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] font-bold text-foreground">Section Title</Label>
-                      <Input
-                        value={aiContent.about.title}
+                      <Label className="text-[11px] font-bold text-foreground">Founder's Story & Origins</Label>
+                      <Textarea
+                        value={aiContent.about.founder_story || ''}
                         onChange={(e) =>
                           setAiContent({
                             ...aiContent,
-                            about: { ...aiContent.about, title: e.target.value },
+                            about: { ...aiContent.about, founder_story: e.target.value },
                           })
                         }
-                        className="h-9 text-xs font-semibold rounded-lg"
+                        placeholder="Narrative about the founder, roots, and how the brand began..."
+                        className="text-xs resize-none h-20 rounded-lg"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] font-bold text-foreground">Narrative Story</Label>
+                      <Label className="text-[11px] font-bold text-foreground">Mission & Brand Story Narrative</Label>
                       <Textarea
                         value={aiContent.about.story}
                         onChange={(e) =>
@@ -773,6 +1320,165 @@ export default function GenerateStorefront() {
                           })
                         }
                         className="text-xs resize-none h-24 rounded-lg"
+                      />
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-bold text-foreground">Heritage / Craft Section Title</Label>
+                        <Input
+                          value={aiContent.about.heritage_title || ''}
+                          onChange={(e) =>
+                            setAiContent({
+                              ...aiContent,
+                              about: { ...aiContent.about, heritage_title: e.target.value },
+                            })
+                          }
+                          placeholder="e.g. A Legacy of Master Goldsmithing"
+                          className="h-9 text-xs rounded-lg"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-bold text-foreground">Heritage / Craft Narrative</Label>
+                        <Textarea
+                          value={aiContent.about.heritage_text || ''}
+                          onChange={(e) =>
+                            setAiContent({
+                              ...aiContent,
+                              about: { ...aiContent.about, heritage_text: e.target.value },
+                            })
+                          }
+                          placeholder="Artisanal craftsmanship, materials, local pride..."
+                          className="text-xs resize-none h-18 rounded-lg"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-bold text-foreground">Commitment to Quality & Ethics</Label>
+                      <Textarea
+                        value={aiContent.about.commitment_text || ''}
+                        onChange={(e) =>
+                          setAiContent({
+                            ...aiContent,
+                            about: { ...aiContent.about, commitment_text: e.target.value },
+                          })
+                        }
+                        placeholder="Ethical sourcing, lifetime customer care, guarantees..."
+                        className="text-xs resize-none h-18 rounded-lg"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Core Brand Values (3 Pillars) */}
+                <div className="bg-muted/30 border border-border/70 rounded-2xl p-5 space-y-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                    <CheckCheck className="h-4 w-4 text-emerald-500" /> Core Brand Values (3 Pillars)
+                  </h4>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {[0, 1, 2].map((idx) => {
+                      const val = aiContent.about.values[idx];
+                      const valTitle = typeof val === 'object' ? val?.title : (typeof val === 'string' ? val : `Value ${idx + 1}`);
+                      const valDesc = typeof val === 'object' ? val?.description : '';
+
+                      return (
+                        <div key={idx} className="p-3.5 bg-card border border-border/60 rounded-xl space-y-2">
+                          <div className="space-y-1">
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase">
+                              Pillar {idx + 1} Title
+                            </Label>
+                            <Input
+                              value={valTitle}
+                              onChange={(e) => {
+                                const newValues = [...aiContent.about.values];
+                                newValues[idx] = {
+                                  title: e.target.value,
+                                  description: valDesc,
+                                };
+                                setAiContent({
+                                  ...aiContent,
+                                  about: { ...aiContent.about, values: newValues },
+                                });
+                              }}
+                              className="h-8 text-xs font-bold rounded-lg"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <Label className="text-[10px] font-bold text-muted-foreground uppercase">
+                              Description
+                            </Label>
+                            <Textarea
+                              value={valDesc}
+                              onChange={(e) => {
+                                const newValues = [...aiContent.about.values];
+                                newValues[idx] = {
+                                  title: valTitle,
+                                  description: e.target.value,
+                                };
+                                setAiContent({
+                                  ...aiContent,
+                                  about: { ...aiContent.about, values: newValues },
+                                });
+                              }}
+                              placeholder="1-2 sentences on this principle..."
+                              className="text-[11px] resize-none h-16 rounded-lg"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Contact & Social Channels Preview */}
+                <div className="bg-muted/30 border border-border/70 rounded-2xl p-5 space-y-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                    <Phone className="h-4 w-4 text-primary" /> Storefront Contact Information
+                  </h4>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold text-muted-foreground">Customer Phone</Label>
+                      <Input
+                        value={aiContent.contact?.phone || contactPhone}
+                        onChange={(e) => {
+                          setContactPhone(e.target.value);
+                          setAiContent({
+                            ...aiContent,
+                            contact: { ...(aiContent.contact || {}), phone: e.target.value },
+                          });
+                        }}
+                        className="h-8 text-xs rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold text-muted-foreground">Support Email</Label>
+                      <Input
+                        value={aiContent.contact?.email || contactEmail}
+                        onChange={(e) => {
+                          setContactEmail(e.target.value);
+                          setAiContent({
+                            ...aiContent,
+                            contact: { ...(aiContent.contact || {}), email: e.target.value },
+                          });
+                        }}
+                        className="h-8 text-xs rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold text-muted-foreground">Store Location</Label>
+                      <Input
+                        value={aiContent.contact?.address || contactAddress}
+                        onChange={(e) => {
+                          setContactAddress(e.target.value);
+                          setAiContent({
+                            ...aiContent,
+                            contact: { ...(aiContent.contact || {}), address: e.target.value },
+                          });
+                        }}
+                        className="h-8 text-xs rounded-lg"
                       />
                     </div>
                   </div>
@@ -786,8 +1492,24 @@ export default function GenerateStorefront() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     {aiContent.features.map((feat, idx) => (
                       <div key={idx} className="p-3 bg-card border border-border/60 rounded-xl space-y-1">
-                        <p className="font-bold text-xs text-foreground">{feat.title}</p>
-                        <p className="text-[11px] text-muted-foreground">{feat.description}</p>
+                        <Input
+                          value={feat.title}
+                          onChange={(e) => {
+                            const newFeats = [...aiContent.features];
+                            newFeats[idx] = { ...newFeats[idx], title: e.target.value };
+                            setAiContent({ ...aiContent, features: newFeats });
+                          }}
+                          className="h-7 text-xs font-bold rounded-md"
+                        />
+                        <Input
+                          value={feat.description}
+                          onChange={(e) => {
+                            const newFeats = [...aiContent.features];
+                            newFeats[idx] = { ...newFeats[idx], description: e.target.value };
+                            setAiContent({ ...aiContent, features: newFeats });
+                          }}
+                          className="h-7 text-[11px] text-muted-foreground rounded-md"
+                        />
                       </div>
                     ))}
                   </div>
@@ -825,7 +1547,7 @@ export default function GenerateStorefront() {
                 onClick={() => setCurrentStep(1)}
                 className="rounded-xl text-xs font-semibold h-10 px-4 gap-2 border-border"
               >
-                <ArrowLeft className="h-4 w-4" /> Back to Brand & Template
+                <ArrowLeft className="h-4 w-4" /> Back to Brand & Scope
               </Button>
               <Button
                 disabled={!canProceedStep2}
@@ -894,7 +1616,7 @@ export default function GenerateStorefront() {
               </div>
             </div>
 
-            {/* URL Bar strip — shows subdomain URL for real browsing */}
+            {/* URL Bar strip */}
             <div className="flex items-center gap-2 bg-muted/60 border border-border/60 rounded-xl px-4 py-2">
               <div className="flex items-center gap-1.5 flex-1 min-w-0">
                 <div className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
@@ -919,7 +1641,6 @@ export default function GenerateStorefront() {
               previewDevice === 'mobile' ? 'px-8 md:px-32 lg:px-56' : ''
             )}>
               <div className="w-full rounded-2xl overflow-hidden border border-border/70 shadow-2xl bg-neutral-950">
-                {/* Fake browser chrome */}
                 <div className="flex items-center gap-1.5 px-4 py-2.5 bg-neutral-900 border-b border-white/5">
                   <div className="h-2.5 w-2.5 rounded-full bg-red-500/70" />
                   <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/70" />
@@ -929,7 +1650,6 @@ export default function GenerateStorefront() {
                   </div>
                 </div>
 
-                {/* Real iframe */}
                 <div className={clsx(
                   'w-full relative bg-white',
                   previewDevice === 'mobile' ? 'h-[640px]' : 'h-[580px]'
@@ -942,7 +1662,6 @@ export default function GenerateStorefront() {
                     sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                     loading="lazy"
                   />
-                  {/* Overlay touch blocker so clicking inside doesn't navigate away */}
                   <div
                     className="absolute inset-0 z-10 cursor-default"
                     title="Preview only — interactions are disabled in the wizard"
@@ -959,7 +1678,7 @@ export default function GenerateStorefront() {
               <p className="text-xs text-muted-foreground leading-relaxed">
                 This is your <span className="font-semibold text-foreground">{activeTemplate.name}</span> theme rendering live with tenant{' '}
                 <span className="font-semibold text-foreground">@{selectedTenant?.slug || 'my-store'}</span>'s data.
-                Products, branding, and AI-generated copy will populate once the storefront is provisioned in the next step.
+                Products and AI brand copy will be saved and published live in the next step.
               </p>
             </div>
 
@@ -1153,11 +1872,14 @@ export default function GenerateStorefront() {
                       <p className="font-bold text-foreground">{industry}</p>
                     </div>
                     <div>
-                      <p className="text-[11px] text-muted-foreground">Brand Color</p>
-                      <div className="flex items-center gap-1.5 font-mono font-bold">
-                        <span style={{ backgroundColor: primaryColor }} className="h-3 w-3 rounded-full inline-block" />
-                        {primaryColor}
-                      </div>
+                      <p className="text-[11px] text-muted-foreground">Catalog Scope</p>
+                      <p className="font-bold text-foreground capitalize">
+                        {catalogScopeType === 'categories'
+                          ? `${selectedCategories.length} Categories`
+                          : catalogScopeType === 'flagship'
+                          ? 'Flagship Items'
+                          : 'Full Catalog'}
+                      </p>
                     </div>
                   </div>
                 </div>
