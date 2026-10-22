@@ -47,7 +47,7 @@ export const PLANS_CONFIG: Record<string, PlanConfig> = {
     badgeClassName: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
     colorBar: 'bg-purple-500',
     description: 'Online store sellers without physical POS',
-    allowedUsers: 'Unlimited',
+    allowedUsers: '1 staff user',
     priceMonthly: 300,
   },
   // Legacy aliases fallback
@@ -58,7 +58,7 @@ export const PLANS_CONFIG: Record<string, PlanConfig> = {
     badgeClassName: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
     colorBar: 'bg-slate-400',
     description: 'Legacy POS tier',
-    allowedUsers: '1 user',
+    allowedUsers: '5 users',
     priceMonthly: 199,
   },
   ecommerce_only: {
@@ -68,7 +68,7 @@ export const PLANS_CONFIG: Record<string, PlanConfig> = {
     badgeClassName: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
     colorBar: 'bg-purple-500',
     description: 'Legacy Ecom tier',
-    allowedUsers: 'Unlimited',
+    allowedUsers: '1 staff user',
     priceMonthly: 300,
   },
   full_suite: {
