@@ -69,9 +69,9 @@ export const GLOBAL_ADDONS_CATALOG: AddonDefinition[] = [
     category: 'capacity',
     priceMonthly: 50,
     billingCycle: 'monthly',
-    description: 'Grant an additional concurrent staff or cashier login beyond the base plan limit.',
+    description: 'One more staff account beyond the plan limit. Manager limits still apply (1 on Standard).',
     benefits: [
-      '1 additional concurrent staff user',
+      '1 additional staff account',
       'Independent role & PIN permissions',
       'Audit log tied to individual cashier',
     ],

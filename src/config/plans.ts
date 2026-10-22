@@ -26,8 +26,8 @@ export const PLANS_CONFIG: Record<string, PlanConfig> = {
     badgeVariant: 'warning',
     badgeClassName: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
     colorBar: 'bg-amber-500',
-    description: '3 users, full POS, inventory, staff & expenses',
-    allowedUsers: '3 users',
+    description: '5 users (1 manager), full POS, inventory, staff & expenses',
+    allowedUsers: '5 users',
     priceMonthly: 500,
   },
   business: {
