@@ -50,6 +50,8 @@ export const AttachAddonModal: React.FC<AttachAddonModalProps> = ({
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly' | 'complimentary' | 'one_time'>('monthly');
   const [customPrice, setCustomPrice] = useState<number>(0);
   const [status, setStatus] = useState<'active' | 'trial'>('active');
+  // Total packs for add-ons that can be bought more than once (seat packs)
+  const [quantity, setQuantity] = useState(1);
 
   React.useEffect(() => {
     if (isOpen && initialAddonKey) {
@@ -69,6 +71,12 @@ export const AttachAddonModal: React.FC<AttachAddonModalProps> = ({
         .map((a) => a.addon_key.toLowerCase())
     );
   }, [currentAddons]);
+
+  // Quantity already on the tenant for stackable add-ons, so a 1-pack can be raised to 2
+  const activeQuantity = (key: string) =>
+    currentAddons.find((a) => a.addon_key.toLowerCase() === key && (a.status === 'active' || a.status === 'trial'))?.quantity || 0;
+  const canAddMore = (addon: AddonDefinition) =>
+    !!addon.maxQuantity && activeQuantity(addon.key) < addon.maxQuantity;
 
   const selectedAddonDef = useMemo(() => {
     return GLOBAL_ADDONS_CATALOG.find((a) => a.key === selectedAddonKey) || null;
@@ -117,12 +125,14 @@ export const AttachAddonModal: React.FC<AttachAddonModalProps> = ({
 
   // Handle selecting an add-on
   const handleSelectAddon = (addon: AddonDefinition) => {
-    if (activeAddonKeys.has(addon.key) || isAddonIncludedInPlan(addon.key, tenant?.plan || '')) {
+    if ((activeAddonKeys.has(addon.key) && !canAddMore(addon)) || isAddonIncludedInPlan(addon.key, tenant?.plan || '')) {
       return;
     }
+    const qty = addon.maxQuantity ? Math.min(addon.maxQuantity, activeQuantity(addon.key) + 1) : 1;
     setSelectedAddonKey(addon.key);
     setBillingCycle(addon.billingCycle === 'one_time' ? 'one_time' : 'monthly');
-    setCustomPrice(addon.priceMonthly);
+    setQuantity(qty);
+    setCustomPrice(addon.priceMonthly * qty);
     setStatus('active');
   };
 
@@ -135,6 +145,7 @@ export const AttachAddonModal: React.FC<AttachAddonModalProps> = ({
         billing_cycle: billingCycle,
         price: billingCycle === 'complimentary' ? 0 : customPrice,
         status,
+        ...(selectedAddonDef?.maxQuantity ? { quantity } : {}),
       });
     },
     onSuccess: () => {
@@ -236,7 +247,7 @@ export const AttachAddonModal: React.FC<AttachAddonModalProps> = ({
             const isIncluded = isAddonIncludedInPlan(addon.key, tenant.plan);
             const isActive = activeAddonKeys.has(addon.key);
             const isSelected = selectedAddonKey === addon.key;
-            const isDisabled = isIncluded || isActive;
+            const isDisabled = isIncluded || (isActive && !canAddMore(addon));
 
             return (
               <div
@@ -266,7 +277,7 @@ export const AttachAddonModal: React.FC<AttachAddonModalProps> = ({
                       )}
                       {isActive && (
                         <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20 text-[10px] px-1.5 py-0">
-                          Currently Active
+                          Currently Active{addon.maxQuantity ? ` (${activeQuantity(addon.key)} of ${addon.maxQuantity})` : ''}
                         </Badge>
                       )}
                     </div>
@@ -299,6 +310,28 @@ export const AttachAddonModal: React.FC<AttachAddonModalProps> = ({
                     onClick={(e) => e.stopPropagation()}
                     className="mt-3 pt-3 border-t border-primary/20 space-y-3 bg-background/50 p-3 rounded-lg"
                   >
+                    {addon.maxQuantity && (
+                      <div>
+                        <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 font-header">
+                          Total Packs
+                        </label>
+                        <select
+                          value={quantity}
+                          onChange={(e) => {
+                            const q = Number(e.target.value);
+                            setQuantity(q);
+                            setCustomPrice(addon.priceMonthly * q);
+                          }}
+                          className="w-full sm:w-1/3 text-xs bg-muted/40 border border-border rounded px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          {Array.from({ length: addon.maxQuantity }, (_, i) => i + 1).map((q) => (
+                            <option key={q} value={q}>
+                              {q} pack{q > 1 ? 's' : ''} ({formatGHS(addon.priceMonthly * q)}/mo)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 font-header">

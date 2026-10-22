@@ -8,6 +8,8 @@ export interface AddonDefinition {
   benefits: string[];
   moduleKey?: string;
   includedInPlans?: string[];
+  /** Add-ons that can be bought more than once (e.g. seat packs); the tenant record keeps a quantity. */
+  maxQuantity?: number;
   badgeVariant?: 'default' | 'secondary' | 'outline' | 'success' | 'warning' | 'info';
 }
 
@@ -64,17 +66,33 @@ export const GLOBAL_ADDONS_CATALOG: AddonDefinition[] = [
     badgeVariant: 'warning',
   },
   {
-    key: 'extra_seat',
-    name: 'Extra User Seat',
+    key: 'seat_pack_5',
+    name: '5-Seat Pack',
     category: 'capacity',
     priceMonthly: 50,
     billingCycle: 'monthly',
-    description: 'One more staff account beyond the plan limit. Manager limits still apply (1 on Standard).',
+    description: '5 more staff accounts and 2 more manager slots. Up to 2 packs; turns on Staff management on any plan.',
     benefits: [
-      '1 additional staff account',
-      'Independent role & PIN permissions',
-      'Audit log tied to individual cashier',
+      '+5 staff accounts per pack',
+      '+2 manager slots per pack',
+      'Staff management on Starter too',
     ],
+    maxQuantity: 2,
+    badgeVariant: 'secondary',
+  },
+  {
+    key: 'seats_unlimited',
+    name: 'Unlimited Staff Seats',
+    category: 'capacity',
+    priceMonthly: 150,
+    billingCycle: 'monthly',
+    description: 'No limit on staff accounts or managers. Other modules (payroll, ecommerce, branches) are still separate.',
+    benefits: [
+      'Unlimited staff accounts',
+      'Unlimited managers',
+      'Better value than packs past 15 staff',
+    ],
+    includedInPlans: ['business', 'full_suite'],
     badgeVariant: 'secondary',
   },
   {

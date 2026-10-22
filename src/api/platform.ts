@@ -607,6 +607,7 @@ export interface TenantAddon {
   status: 'active' | 'trial' | 'cancelled' | 'expired';
   billing_cycle: 'monthly' | 'yearly' | 'complimentary' | 'one_time';
   price?: number | null;
+  quantity?: number;
   date_activated?: string;
   expires_at?: string | null;
 }
@@ -618,7 +619,7 @@ export const getTenantAddons = async (tenantId: string): Promise<TenantAddon[]> 
 
 export const attachTenantAddon = async (
   tenantId: string,
-  payload: { addon_key: string; billing_cycle?: string; price?: number; status?: string }
+  payload: { addon_key: string; billing_cycle?: string; price?: number; status?: string; quantity?: number }
 ) => {
   const { data } = await apiClient.post<any>(`/api/v1/platform/tenants/${tenantId}/addons`, payload);
   return data?.success?.data;
