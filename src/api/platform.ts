@@ -161,7 +161,7 @@ export interface TenantDetailResponse {
     id: string;
     name: string;
     email: string;
-    role: 'owner' | 'manager' | 'cashier';
+    role: 'owner' | 'admin' | 'manager' | 'cashier';
     is_active: boolean;
     last_login?: string;
   }[];
@@ -215,6 +215,12 @@ export const getPlatformTenantProducts = async (
     params,
   });
   return (data?.success?.data || { products: [], pagination: {} }) as PlatformTenantProductsResponse;
+};
+
+/** Make another staff member the business owner; the previous owner becomes an admin. */
+export const reassignTenantOwner = async (tenantId: string, staffId: string) => {
+  const { data } = await apiClient.put<any>(`/api/v1/platform/tenants/${tenantId}/owner`, { staff_id: staffId });
+  return data?.success?.data;
 };
 
 export const rotateTenantApiKey = async (id: string) => {

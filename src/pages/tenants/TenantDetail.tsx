@@ -7,7 +7,8 @@ import {
   TenantDetailResponse,
   attachTenantAddon,
   detachTenantAddon,
-  TenantAddon
+  TenantAddon,
+  reassignTenantOwner
 } from '@/api/platform';
 import { useCurrency } from '@/hooks/useCurrency';
 import { formatShortDate, formatDateTime } from '@/utils/date';
@@ -127,6 +128,20 @@ export default function TenantDetail() {
     rotateKeyMutation.mutate();
     setIsRotateConfirmOpen(false);
   };
+
+  // Hand ownership to another staff member (e.g. the owner lost access or sold the business)
+  const [ownerTarget, setOwnerTarget] = useState<{ id: string; name: string } | null>(null);
+  const reassignOwnerMutation = useMutation({
+    mutationFn: (staffId: string) => reassignTenantOwner(id || '', staffId),
+    onSuccess: () => {
+      toast.success(`${ownerTarget?.name} is now the owner`);
+      setOwnerTarget(null);
+      queryClient.invalidateQueries({ queryKey: ['platform_tenant_detail', id] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error?.message || 'Failed to change owner');
+    },
+  });
 
   if (error) {
     return (
@@ -828,7 +843,7 @@ export default function TenantDetail() {
             Registered Staff Members
           </h3>
           <p className="text-[11px] text-muted-foreground mt-1">
-            Read-only list of active merchant operators and terminal roles.
+            Merchant operators and terminal roles. Each business has one owner; "Make owner" moves the current owner to admin.
           </p>
         </div>
 
@@ -840,7 +855,8 @@ export default function TenantDetail() {
                 <th className="py-3 px-4">Email Address</th>
                 <th className="py-3 px-4">Role</th>
                 <th className="py-3 px-4">Status</th>
-                <th className="py-3 pl-4 text-right">Last Login</th>
+                <th className="py-3 px-4 text-right">Last Login</th>
+                <th className="py-3 pl-4 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border text-foreground">
@@ -849,15 +865,22 @@ export default function TenantDetail() {
                   <td className="py-3 pr-4 font-semibold">{st.name}</td>
                   <td className="py-3 px-4 text-muted-foreground">{st.email}</td>
                   <td className="py-3 px-4">
-                    <Badge variant={st.role === 'owner' ? 'outline-primary' : st.role === 'manager' ? 'info' : 'secondary'}>
+                    <Badge variant={st.role === 'owner' ? 'outline-primary' : st.role === 'admin' || st.role === 'manager' ? 'info' : 'secondary'}>
                       {st.role.toUpperCase()}
                     </Badge>
                   </td>
                   <td className="py-3 px-4">
                     <StatusBadge status={st.is_active ? 'success' : 'cancelled'} />
                   </td>
-                  <td className="py-3 pl-4 text-right text-muted-foreground font-medium">
+                  <td className="py-3 px-4 text-right text-muted-foreground font-medium">
                     {st.last_login ? formatDateTime(st.last_login) : 'Never logged in'}
+                  </td>
+                  <td className="py-3 pl-4 text-right">
+                    {st.role !== 'owner' && (
+                      <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => setOwnerTarget({ id: st.id, name: st.name })}>
+                        Make owner
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -876,6 +899,18 @@ export default function TenantDetail() {
         confirmLabel="Rotate Key"
         isDanger={true}
         isLoading={rotateKeyMutation.isPending}
+      />
+
+      {/* Change Owner Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!ownerTarget}
+        onClose={() => setOwnerTarget(null)}
+        onConfirm={() => ownerTarget && reassignOwnerMutation.mutate(ownerTarget.id)}
+        title={`Make ${ownerTarget?.name || ''} the owner?`}
+        description={`${owner?.name || 'The current owner'} will become an admin. ${ownerTarget?.name || 'The new owner'} takes over billing, payouts and managing admins (their account is activated if it was deactivated).`}
+        confirmLabel="Make owner"
+        isDanger={true}
+        isLoading={reassignOwnerMutation.isPending}
       />
 
       {/* Add-on Action Confirmation Dialog */}
