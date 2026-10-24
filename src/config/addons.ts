@@ -66,6 +66,23 @@ export const GLOBAL_ADDONS_CATALOG: AddonDefinition[] = [
     badgeVariant: 'warning',
   },
   {
+    key: 'price_override',
+    name: 'Price Changes at the Till',
+    category: 'modules',
+    priceMonthly: 30,
+    billingCycle: 'monthly',
+    description: 'Let chosen staff raise an item\'s price at the register (never below the set price; lower prices use a discount).',
+    benefits: [
+      'Raise a price on the spot (e.g. after a price rise)',
+      'Can\'t go below the set price',
+      'Only staff given the permission, or with a manager\'s PIN',
+      'Original price kept on every sale for reports',
+    ],
+    moduleKey: 'price_override',
+    includedInPlans: ['business', 'full_suite'],
+    badgeVariant: 'secondary',
+  },
+  {
     key: 'seat_pack_5',
     name: '5-Seat Pack',
     category: 'capacity',
