@@ -8,6 +8,7 @@ import {
   generateAndDeployStorefront, 
   GeneratedStorefrontContent,
   getTenantCatalogSummary,
+  getTenantStorefront,
   TenantCatalogSummary,
   extractStorefrontCopy
 } from '@/api/platform';
@@ -189,14 +190,14 @@ export default function GenerateStorefront() {
   const [aboutNotes, setAboutNotes] = useState<string>('');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('linea-luxury');
   const [subdomain, setSubdomain] = useState<string>('');
-  const [customDomain, setCustomDomain] = useState<string>('');
 
   // Catalog Scoping State
   const [catalogSummary, setCatalogSummary] = useState<TenantCatalogSummary | null>(null);
   const [catalogScopeType, setCatalogScopeType] = useState<'all' | 'categories' | 'flagship'>('all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedFlagshipIds, setSelectedFlagshipIds] = useState<string[]>([]);
-  const [applyCatalogScope, setApplyCatalogScope] = useState<boolean>(true);
+  // Off by default: it overwrites the online/in-store choice on every product in the catalog
+  const [applyCatalogScope, setApplyCatalogScope] = useState<boolean>(false);
 
   // Contact Info State
   const [contactPhone, setContactPhone] = useState<string>('');
@@ -236,10 +237,33 @@ export default function GenerateStorefront() {
     return TEMPLATES.find((t) => t.id === selectedTemplateId) || TEMPLATES[0];
   }, [selectedTemplateId]);
 
+  // The tenant's current storefront: address, signed preview link and existing content
+  const { data: tenantStorefront } = useQuery({
+    queryKey: ['platform-tenant-storefront', selectedTenantId],
+    queryFn: () => getTenantStorefront(selectedTenantId),
+    enabled: !!selectedTenantId,
+  });
+
+  // Preview of the chosen template, through the signed link (works before the store is live)
   const liveStorefrontUrl = useMemo(() => {
-    const slug = selectedTenant?.slug || 'my-store';
-    return `${activeTemplate.baseUrl}/?tenant=${slug}&theme=${activeTemplate.id}&preview=true`;
-  }, [activeTemplate, selectedTenant]);
+    if (!tenantStorefront?.preview_url) return '';
+    const url = new URL(tenantStorefront.preview_url);
+    url.searchParams.set('theme', activeTemplate.id);
+    return url.toString();
+  }, [activeTemplate, tenantStorefront]);
+
+  // Re-editing: start from the content that's live, so launching again doesn't wipe earlier edits
+  const loadedContentFor = useRef<string | null>(null);
+  useEffect(() => {
+    const existing = tenantStorefront?.deployment;
+    if (!existing?.ai_generated_content || loadedContentFor.current === selectedTenantId) return;
+    loadedContentFor.current = selectedTenantId;
+    setAiContent(existing.ai_generated_content);
+    if (TEMPLATES.some((t) => t.id === existing.template_id)) setSelectedTemplateId(existing.template_id);
+    const color = existing.ai_generated_content?.theme?.primary_color;
+    if (color) setPrimaryColor(color);
+    toast.success('Loaded the current storefront content');
+  }, [tenantStorefront, selectedTenantId]);
 
   const parsedBase = useMemo(() => parseStorefrontBase(STOREFRONT_BASE_URL), []);
 
@@ -435,7 +459,6 @@ export default function GenerateStorefront() {
       template_id: selectedTemplateId,
       primary_color: primaryColor,
       subdomain,
-      custom_domain: customDomain || undefined,
       override_content: aiContent || undefined,
       target_audience: targetAudience || undefined,
       about_notes: aboutNotes || undefined,
@@ -864,7 +887,7 @@ export default function GenerateStorefront() {
                     className="h-3.5 w-3.5 rounded border-border text-primary cursor-pointer"
                   />
                   <label htmlFor="applyCatalogScopeCheckbox" className="text-[11px] text-muted-foreground cursor-pointer select-none">
-                    Automatically update sales channel flag on deployment (Unselected items will be set to <strong className="text-foreground">In-Store Only</strong>).
+                    Also update which products are sold online when launching. This overwrites the tenant's current settings: unselected items become <strong className="text-foreground">In-Store Only</strong>.
                   </label>
                 </div>
               </div>
@@ -1751,7 +1774,7 @@ export default function GenerateStorefront() {
                   </div>
                   <div className="p-4 bg-muted/20 border border-border/60 rounded-xl space-y-1 font-sans">
                     <p className="text-[11px] text-muted-foreground truncate">
-                      {customDomain ? `https://${customDomain}` : liveStorefrontUrl}
+                      {tenantStorefront?.storefront_url || subdomainUrl}
                     </p>
                     <h5 className="text-sm font-semibold text-foreground hover:underline cursor-pointer">
                       {aiContent.seo.meta_title}
@@ -1849,7 +1872,7 @@ export default function GenerateStorefront() {
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">SUBDOMAIN</span>
                 <a
-                  href={subdomainUrl}
+                  href={liveStorefrontUrl || subdomainUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs font-semibold text-primary hover:underline whitespace-nowrap"
@@ -2008,7 +2031,7 @@ export default function GenerateStorefront() {
                     Back to Storefronts List
                   </Button>
                   <Button
-                    onClick={() => window.open(deployedResult.storefront_url, '_blank')}
+                    onClick={() => window.open(deployedResult.preview_url || deployedResult.storefront_url, '_blank')}
                     className="rounded-xl text-xs font-bold h-10 px-6 gap-2"
                   >
                     <ExternalLink className="h-4 w-4" /> Open Storefront
@@ -2027,35 +2050,25 @@ export default function GenerateStorefront() {
 
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold text-foreground">
-                      Storefront Subdomain Address <span className="text-rose-500">*</span>
-                    </Label>
-                    <div className="flex items-center rounded-lg border border-border bg-background overflow-hidden focus-within:ring-0">
-                      <span className="px-3 py-2 text-xs font-mono text-muted-foreground bg-muted/40 border-r border-border select-none">
-                        {parsedBase.protocol}//
-                      </span>
-                      <Input
-                        value={subdomain}
-                        onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9.:-]/g, ''))}
-                        className="border-0 shadow-none text-xs font-bold text-foreground focus-visible:ring-0 rounded-none h-10"
-                        placeholder={parsedBase.isLocal ? "slug.localhost:5175" : "slug.domain.com"}
-                      />
+                    <Label className="text-xs font-bold text-foreground">Storefront Address</Label>
+                    <div className="flex items-center rounded-lg border border-border bg-muted/30 overflow-hidden h-10 px-3 text-xs font-mono font-bold text-foreground">
+                      {tenantStorefront?.storefront_url || subdomainUrl}
                     </div>
                     <p className="text-[10px] text-muted-foreground">
-                      Subdomain address derived from <code className="font-mono text-foreground font-semibold">{STOREFRONT_BASE_URL}</code>.
+                      Every store is served at the tenant's slug for now.
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold text-foreground">Custom Domain (Optional)</Label>
+                    <Label className="text-xs font-bold text-foreground">Custom Domain</Label>
                     <Input
-                      value={customDomain}
-                      onChange={(e) => setCustomDomain(e.target.value)}
-                      placeholder="e.g. www.lineajewelry.com"
+                      disabled
+                      value=""
+                      placeholder="Coming soon"
                       className="rounded-xl h-10 text-xs font-mono"
                     />
                     <p className="text-[11px] text-muted-foreground">
-                      Attach a custom branded domain (e.g. CNAME pointing to Vercel).
+                      Custom domains (e.g. www.lineajewelry.com) are coming soon.
                     </p>
                   </div>
 
@@ -2064,7 +2077,7 @@ export default function GenerateStorefront() {
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground font-medium">Subdomain Endpoint:</span>
                       <a
-                        href={subdomainUrl}
+                        href={liveStorefrontUrl || subdomainUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-mono text-[11px] text-primary hover:underline font-semibold flex items-center gap-1 truncate max-w-md"

@@ -380,6 +380,8 @@ export interface StorefrontItem {
   subdomain: string;
   custom_domain?: string | null;
   storefront_url: string;
+  /** Opens the store even while it isn't live */
+  preview_url?: string;
   status: 'active' | 'maintenance' | 'unpublished' | string;
   orders_count: number;
   online_gmv: number;
@@ -513,6 +515,23 @@ export interface TenantCatalogSummary {
     is_available_online?: boolean;
   }[];
 }
+
+export interface TenantStorefront {
+  storefront_url: string;
+  /** Opens the store even while it isn't live; expires after a week */
+  preview_url: string;
+  deployment: {
+    id: string;
+    template_id: string;
+    status: 'active' | 'maintenance' | 'unpublished';
+    ai_generated_content: any;
+  } | null;
+}
+
+export const getTenantStorefront = async (tenantId: string): Promise<TenantStorefront> => {
+  const { data } = await apiClient.get<any>(`/api/v1/platform/storefronts/tenant/${tenantId}`);
+  return data?.success?.data;
+};
 
 export const getTenantCatalogSummary = async (tenantId: string): Promise<TenantCatalogSummary> => {
   const { data } = await apiClient.get<any>(`/api/v1/platform/generate/tenant-catalog-summary/${tenantId}`);

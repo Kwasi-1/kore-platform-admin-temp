@@ -279,7 +279,7 @@ export default function StorefrontList() {
               </a>
             ) : (
               <a
-                href={store.storefront_url}
+                href={store.status === 'active' ? store.storefront_url : (store.preview_url || store.storefront_url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-mono font-semibold text-muted-foreground hover:underline truncate inline-flex items-center gap-1"
