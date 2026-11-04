@@ -213,6 +213,7 @@ export default function StorefrontList() {
     { key: 'orders_count', label: 'Web Orders' },
     { key: 'online_gmv', label: 'Online GMV' },
     { key: 'status', label: 'Status' },
+    { key: 'plan_state', label: 'Store coverage' },
   ];
 
   const defaultRowActions = [
@@ -319,6 +320,21 @@ export default function StorefrontList() {
             <span className={clsx("h-1.5 w-1.5 rounded-full", isLive ? "bg-emerald-500 animate-pulse" : isMaintenance ? "bg-amber-500" : "bg-neutral-400")} />
             {store.status}
           </span>
+        ),
+        // Whether the tenant's plan still covers the store (it pauses after the grace period)
+        plan_state: store.entitlement?.state === 'grace' ? (
+          <span
+            className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+            title={store.entitlement.pauses_at ? `Pauses ${new Date(store.entitlement.pauses_at).toLocaleDateString()}` : undefined}
+          >
+            Grace · {store.entitlement.days_left}d
+          </span>
+        ) : store.entitlement?.state === 'lapsed' ? (
+          <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+            Plan lapsed
+          </span>
+        ) : (
+          <span className="text-[11px] text-muted-foreground">Covered</span>
         ),
         rowActions: [
           {

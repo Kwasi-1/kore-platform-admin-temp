@@ -382,6 +382,8 @@ export interface StorefrontItem {
   storefront_url: string;
   /** Opens the store even while it isn't live */
   preview_url?: string;
+  /** Whether the plan still covers the store: full, grace (pauses_at, days_left) or lapsed (paused) */
+  entitlement?: { state: 'full' | 'grace' | 'lapsed'; pauses_at: string | null; days_left: number | null };
   status: 'active' | 'maintenance' | 'unpublished' | string;
   orders_count: number;
   online_gmv: number;
