@@ -113,17 +113,20 @@ export const GLOBAL_ADDONS_CATALOG: AddonDefinition[] = [
     badgeVariant: 'secondary',
   },
   {
-    key: 'multi_branch',
-    name: 'Additional Branch / Location',
+    // Business includes 3 locations (stores and warehouses alike); each of these adds one.
+    // Only counts on Business (the multi_location module); quantity = locations added, no cap.
+    key: 'extra_location',
+    name: 'Extra Location',
     category: 'capacity',
     priceMonthly: 200,
     billingCycle: 'monthly',
-    description: 'Expand commerce operations with a secondary retail outlet or warehouse branch.',
+    description: 'One more shop or warehouse beyond the 3 included with Business. Business plan only.',
     benefits: [
-      'Isolated stock levels per branch',
-      'Branch-scoped daily sales reports',
-      'Inter-branch stock transfer logging',
+      'Its own stock, tills and staff',
+      'Transfers to and from the other locations',
+      'Shows in branch reports',
     ],
+    maxQuantity: 99,
     badgeVariant: 'secondary',
   },
   {
