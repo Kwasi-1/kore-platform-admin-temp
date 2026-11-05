@@ -657,3 +657,45 @@ export const detachTenantAddon = async (tenantId: string, addonKey: string) => {
   return data?.success?.data;
 };
 
+
+// ─── Custom domains ───────────────────────────────────────────────────────────
+
+export interface StorefrontDomainRecord {
+  type: string;
+  name: string;
+  value: string;
+  reason?: string;
+}
+
+export interface StorefrontDomain {
+  id: string;
+  domain: string;
+  /** pending | verifying (waiting for DNS/SSL) | active (serving) | failed */
+  status: 'pending' | 'verifying' | 'active' | 'failed';
+  is_primary: boolean;
+  /** Set on the bare domain, which redirects to the www one */
+  redirect_to: string | null;
+  provided_by_platform: boolean;
+  dns_records: StorefrontDomainRecord[];
+  last_error: string | null;
+  last_checked_at: string | null;
+}
+
+export const getTenantDomains = async (tenantId: string) => {
+  const { data } = await apiClient.get<any>(`/api/v1/platform/storefronts/tenant/${tenantId}/domains`);
+  return data?.success?.data as { domains: StorefrontDomain[]; store_address: string; configured: boolean };
+};
+
+export const addTenantDomain = async (tenantId: string, body: { domain: string; provided_by_platform: boolean; addon_price?: number }) => {
+  const { data } = await apiClient.post<any>(`/api/v1/platform/storefronts/tenant/${tenantId}/domains`, body);
+  return data?.success?.data?.domains as StorefrontDomain[];
+};
+
+export const checkTenantDomain = async (domainId: string) => {
+  const { data } = await apiClient.post<any>(`/api/v1/platform/storefronts/domains/${domainId}/check`);
+  return data?.success?.data?.domain as StorefrontDomain;
+};
+
+export const removeTenantDomain = async (domainId: string) => {
+  await apiClient.delete(`/api/v1/platform/storefronts/domains/${domainId}`);
+};

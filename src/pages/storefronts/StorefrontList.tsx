@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { getPlanConfig } from '@/config/plans';
 import ProvisionStorefrontModal from '@/components/storefronts/ProvisionStorefrontModal';
+import StorefrontDomainsModal from '@/components/storefronts/StorefrontDomainsModal';
 import EnhancedTableComponent, { TableColumn, TopContentAction } from '@/components/shared/MainTableComponent';
 import {
   Dialog,
@@ -228,6 +229,11 @@ export default function StorefrontList() {
       icon: 'heroicons:sparkles',
     },
     {
+      key: 'domains',
+      label: 'Custom Domain',
+      icon: 'heroicons:globe-alt',
+    },
+    {
       key: 'toggle_status',
       label: 'Toggle Status',
       icon: 'heroicons:power',
@@ -348,6 +354,11 @@ export default function StorefrontList() {
             icon: 'heroicons:sparkles',
           },
           {
+            key: 'domains',
+            label: 'Custom Domain',
+            icon: 'heroicons:globe-alt',
+          },
+          {
             key: 'toggle_status',
             label: isLive ? 'Pause Storefront' : 'Activate Storefront',
             icon: 'heroicons:power',
@@ -365,12 +376,17 @@ export default function StorefrontList() {
     });
   }, [storefronts, formatGHS]);
 
+  // Custom domain panel for one store
+  const [domainsFor, setDomainsFor] = React.useState<{ tenantId: string; name: string } | null>(null);
+
   const handleRowActionClick = (actionKey: string, row: any) => {
     const store = row.__record as StorefrontItem;
     if (actionKey === 'visit') {
       window.open(store.storefront_url, '_blank');
     } else if (actionKey === 'edit_ai') {
       navigate(`/storefronts/generate?tenant_id=${store.tenant_id}`);
+    } else if (actionKey === 'domains') {
+      setDomainsFor({ tenantId: store.tenant_id, name: unescapeName(store.tenant_name) });
     } else if (actionKey === 'toggle_status') {
       const isLive = store.status === 'active';
       if (isLive) {
@@ -646,6 +662,13 @@ export default function StorefrontList() {
           onClose={() => setProvisionModalOpen(false)}
           eligibleTenants={eligibleTenants}
           defaultTenantId={selectedTenantForModal}
+        />
+
+        <StorefrontDomainsModal
+          isOpen={!!domainsFor}
+          onClose={() => setDomainsFor(null)}
+          tenantId={domainsFor?.tenantId ?? null}
+          tenantName={domainsFor?.name ?? ''}
         />
 
         {/* Confirmation Modal */}
