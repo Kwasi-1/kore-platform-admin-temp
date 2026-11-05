@@ -24,6 +24,7 @@ const Transactions = lazy(() => import('@/pages/analytics/Transactions'));
 // Storefronts
 const StorefrontList = lazy(() => import('@/pages/storefronts/StorefrontList'));
 const GenerateStorefront = lazy(() => import('@/pages/storefronts/GenerateStorefront'));
+const StorefrontEditor = lazy(() => import('@/pages/storefronts/StorefrontEditor'));
 
 // Settings
 const PlatformSettings = lazy(() => import('@/pages/settings/PlatformSettings'));
@@ -68,6 +69,7 @@ function AppRoutes() {
         <Route path="/analytics/transactions" element={<Transactions />} />
         <Route path="/storefronts" element={<StorefrontList />} />
         <Route path="/storefronts/generate" element={<GenerateStorefront />} />
+        <Route path="/storefronts/:deploymentId/editor" element={<StorefrontEditor />} />
         <Route path="/settings" element={<PlatformSettings />} />
         <Route path="/settings/health" element={<SystemHealth />} />
         <Route path="/*" element={<Navigate to="/dashboard" replace />} />

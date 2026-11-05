@@ -699,3 +699,67 @@ export const checkTenantDomain = async (domainId: string) => {
 export const removeTenantDomain = async (domainId: string) => {
   await apiClient.delete(`/api/v1/platform/storefronts/domains/${domainId}`);
 };
+
+// ─── Storefront visual editor ─────────────────────────────────────────────────
+
+export interface StorefrontEditorVersion {
+  id: string;
+  number: number;
+  template_id: string | null;
+  published_by: string | null;
+  published_at: string | null;
+}
+
+export interface StorefrontEditorData {
+  deployment_id: string;
+  tenant_id: string;
+  tenant_name: string;
+  status: string;
+  /** The draft's template (or the live one when there's no draft) */
+  template_id: string;
+  published_template_id: string;
+  published: any;
+  /** What the editor edits: the draft, or a copy of the live content */
+  draft: any;
+  has_draft: boolean;
+  /** Send back with every save/publish; a mismatch means someone else edited (409) */
+  version: number;
+  draft_updated_at: string | null;
+  published_at: string | null;
+  preview_url: string | null;
+  versions: StorefrontEditorVersion[];
+}
+
+export const getStorefrontEditor = async (deploymentId: string) => {
+  const { data } = await apiClient.get<any>(`/api/v1/platform/storefronts/${deploymentId}/editor`);
+  return data?.success?.data as StorefrontEditorData;
+};
+
+export const saveStorefrontDraft = async (deploymentId: string, body: { content: any; template_id: string; version: number }) => {
+  const { data } = await apiClient.put<any>(`/api/v1/platform/storefronts/${deploymentId}/draft`, body);
+  return data?.success?.data as { version: number; draft_updated_at: string };
+};
+
+export const publishStorefrontDraft = async (deploymentId: string, version: number) => {
+  const { data } = await apiClient.post<any>(`/api/v1/platform/storefronts/${deploymentId}/publish`, { version });
+  return data?.success?.data as StorefrontEditorData;
+};
+
+export const discardStorefrontDraft = async (deploymentId: string) => {
+  const { data } = await apiClient.post<any>(`/api/v1/platform/storefronts/${deploymentId}/discard`);
+  return data?.success?.data as StorefrontEditorData;
+};
+
+export const restoreStorefrontVersion = async (deploymentId: string, versionId: string) => {
+  const { data } = await apiClient.post<any>(`/api/v1/platform/storefronts/${deploymentId}/versions/${versionId}/restore`);
+  return data?.success?.data as StorefrontEditorData;
+};
+
+export const uploadStorefrontImage = async (deploymentId: string, file: File) => {
+  const form = new FormData();
+  form.append('image', file);
+  const { data } = await apiClient.post<any>(`/api/v1/platform/storefronts/${deploymentId}/images`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data?.success?.data?.url as string;
+};

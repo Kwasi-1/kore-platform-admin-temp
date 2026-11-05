@@ -229,6 +229,11 @@ export default function StorefrontList() {
       icon: 'heroicons:sparkles',
     },
     {
+      key: 'design',
+      label: 'Edit Design & Content',
+      icon: 'heroicons:paint-brush',
+    },
+    {
       key: 'domains',
       label: 'Custom Domain',
       icon: 'heroicons:globe-alt',
@@ -354,6 +359,11 @@ export default function StorefrontList() {
             icon: 'heroicons:sparkles',
           },
           {
+            key: 'design',
+            label: 'Edit Design & Content',
+            icon: 'heroicons:paint-brush',
+          },
+          {
             key: 'domains',
             label: 'Custom Domain',
             icon: 'heroicons:globe-alt',
@@ -385,6 +395,8 @@ export default function StorefrontList() {
       window.open(store.storefront_url, '_blank');
     } else if (actionKey === 'edit_ai') {
       navigate(`/storefronts/generate?tenant_id=${store.tenant_id}`);
+    } else if (actionKey === 'design') {
+      navigate(`/storefronts/${store.id}/editor`);
     } else if (actionKey === 'domains') {
       setDomainsFor({ tenantId: store.tenant_id, name: unescapeName(store.tenant_name) });
     } else if (actionKey === 'toggle_status') {
